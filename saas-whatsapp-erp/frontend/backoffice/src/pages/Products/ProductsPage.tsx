@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { Product, ProductType, CreateProductRequest } from '../../types/product';
+import { Product, ProductType, CreateProductRequest, PRODUCT_TYPE_LABELS } from '../../types/product';
 import { productService } from '../../services/productService';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
@@ -15,12 +15,13 @@ const ProductsPage: React.FC = () => {
     // Form State
     const [formData, setFormData] = useState<CreateProductRequest>({
         name: '',
-        type: ProductType.TANGIBLE,
+        type: ProductType.Tangible,
         price: 0,
         taxRate: 0.15,
         trackInventory: false,
         stock: 0
     });
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     useEffect(() => {
         loadProducts();
@@ -41,12 +42,13 @@ const ProductsPage: React.FC = () => {
     const handleOpenModal = () => {
         setFormData({
             name: '',
-            type: ProductType.TANGIBLE,
+            type: ProductType.Tangible,
             price: 0,
             taxRate: 0.15,
             trackInventory: false,
             stock: 0
         });
+        setErrorMsg(null);
         setIsModalOpen(true);
     };
 
@@ -61,13 +63,12 @@ const ProductsPage: React.FC = () => {
                 stock: formData.trackInventory ? Number(formData.stock || 0) : 0,
                 taxRate: Number(formData.taxRate)
             };
-            
             await productService.create(request);
             await loadProducts();
             handleCloseModal();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating product:', error);
-            alert('Error al crear producto');
+            setErrorMsg(error?.response?.data?.message || 'Error al crear producto');
         }
     };
 
@@ -186,13 +187,18 @@ const ProductsPage: React.FC = () => {
                         <select 
                             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             value={formData.type}
-                            onChange={(e) => setFormData({...formData, type: e.target.value as ProductType})}
+                            onChange={(e) => setFormData({...formData, type: Number(e.target.value) as ProductType})}
                         >
-                            <option value={ProductType.TANGIBLE}>Producto (Tangible)</option>
-                            <option value={ProductType.SERVICE}>Servicio</option>
-                            <option value={ProductType.RENTAL}>Alquiler</option>
+                            {Object.values(ProductType)
+                                .filter(v => typeof v === 'number')
+                                .map((v) => (
+                                    <option key={v} value={v}>{PRODUCT_TYPE_LABELS[v as ProductType]}</option>
+                                ))}
                         </select>
                     </div>
+            {errorMsg && (
+                <div className="text-red-600 text-sm font-semibold mb-2">{errorMsg}</div>
+            )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <Input 

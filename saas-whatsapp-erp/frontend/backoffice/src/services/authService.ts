@@ -11,18 +11,14 @@ const MOCK_USER: UserInfo = {
 };
 
 export const authService = {
-  login: async (data: LoginRequest): Promise<{ data: AuthResponse }> => {
-      // Mock Login for Demo/Development
-      if (data.email === 'demo@saas.com' && data.password === '123456') {
-          return new Promise(resolve => setTimeout(() => resolve({
-              data: {
-                  token: 'mock-token-' + Date.now(),
-                  user: MOCK_USER
-              }
-          }), 1000));
-      }
-      return api.post<AuthResponse>('/auth/login', data);
-  },
+    login: async (data: LoginRequest): Promise<{ data: AuthResponse }> => {
+            try {
+                return await api.post<AuthResponse>('/auth/login', data);
+            } catch (error) {
+                // Mejor feedback: lanzar error para mostrar en UI
+                throw error;
+            }
+    },
   
   register: (data: RegisterRequest) => api.post<AuthResponse>('/auth/register', data),
   

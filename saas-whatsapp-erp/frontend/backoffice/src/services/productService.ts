@@ -18,10 +18,15 @@ export const productService = {
       const response = await api.get<Product>(`/products/${id}`);
       return adaptProduct(response.data);
   },
-  create: async (data: CreateProductRequest): Promise<Product> => {
-      const response = await api.post<Product>('/products', data);
-      return adaptProduct(response.data);
-  },
+    create: async (data: CreateProductRequest): Promise<Product> => {
+            try {
+                const response = await api.post<Product>('/products', data);
+                return adaptProduct(response.data);
+            } catch (error) {
+                // Mejor feedback: lanzar error para mostrar en UI
+                throw error;
+            }
+    },
   update: async (id: string, data: UpdateProductRequest): Promise<Product> => {
        const response = await api.put<Product>(`/products/${id}`, data);
        return adaptProduct(response.data);
