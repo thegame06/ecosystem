@@ -1,0 +1,15 @@
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\bin\Debug\net9.0\SaaS.Application.deps.json
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\bin\Debug\net9.0\SaaS.Application.dll
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\bin\Debug\net9.0\SaaS.Application.pdb
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\bin\Debug\net9.0\SaaS.Domain.dll
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\bin\Debug\net9.0\SaaS.Domain.pdb
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\SaaS.Application.csproj.AssemblyReference.cache
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\SaaS.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\SaaS.Application.AssemblyInfoInputs.cache
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\SaaS.Application.AssemblyInfo.cs
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\SaaS.Application.csproj.CoreCompileInputs.cache
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\SaaS.App.D64653CB.Up2Date
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\SaaS.Application.dll
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\refint\SaaS.Application.dll
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\SaaS.Application.pdb
+C:\labs\ecosystem\saas-whatsapp-erp\backend\src\SaaS.Application\obj\Debug\net9.0\ref\SaaS.Application.dll
