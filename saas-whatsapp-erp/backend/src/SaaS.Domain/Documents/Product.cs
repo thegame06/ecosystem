@@ -54,6 +54,24 @@ public class Product
     public decimal? TaxRate { get; set; }
 
     /// <summary>
+    /// URL de la imagen del producto
+    /// </summary>
+    [BsonElement("imageUrl")]
+    public string? ImageUrl { get; set; }
+
+    /// <summary>
+    /// Unidad de medida (ej. kg, m, unidad, litro)
+    /// </summary>
+    [BsonElement("unit")]
+    public string? Unit { get; set; }
+
+    /// <summary>
+    /// Descuento por defecto (porcentaje o monto fijo, según lógica de negocio. Asumiremos %)
+    /// </summary>
+    [BsonElement("discount")]
+    public decimal? Discount { get; set; }
+
+    /// <summary>
     /// Control de inventario (opcional)
     /// </summary>
     [BsonElement("trackInventory")]

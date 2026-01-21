@@ -43,7 +43,7 @@ con un objetivo mínimo de **USD 3,000 de UTILIDAD mensual**, no solo ingresos.
 ## Stack técnico obligatorio
 - Backend: .NET 10, C#, ASP.NET Web API
 - Arquitectura: Clean Architecture + DDD
-- DB: PostgreSQL
+- DB: MongoDB Atlas (Free Tier)
 - Frontend: React + TypeScript
 - Mobile: React Native
 - Auth: Email, Google, Microsoft (OAuth2 / OIDC)

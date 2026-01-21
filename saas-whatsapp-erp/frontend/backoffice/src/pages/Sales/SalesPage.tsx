@@ -97,7 +97,8 @@ const SalesPage: React.FC = () => {
                     productName: product.name,
                     quantity: 1,
                     unitPrice: product.price, // Assuming price includes tax or logic needs split
-                    taxRate: 0.21, // Hardcoded for MVP
+                    discount: product.discount || 0,
+                    taxRate: product.taxRate || 0.15,
                     subtotal: 0,
                     taxAmount: 0,
                     total: 0
@@ -121,9 +122,24 @@ const SalesPage: React.FC = () => {
         }));
     };
 
+    const updateDiscount = (productId: string, discount: number) => {
+         setCart(prev => prev.map(item => {
+            if (item.productId === productId) {
+                // Limit discount 0-100
+                const validDiscount = Math.min(100, Math.max(0, discount));
+                return updateItemCalculations({ ...item, discount: validDiscount });
+            }
+            return item;
+        }));
+    };
+
     const updateItemCalculations = (item: CartItem): CartItem => {
         // Simple logic: Unit Price is Net
-        const subtotal = item.unitPrice * item.quantity;
+        const discountPercent = item.discount || 0;
+        const grossTotal = item.unitPrice * item.quantity;
+        const discountAmount = grossTotal * (discountPercent / 100);
+        const subtotal = grossTotal - discountAmount;
+        
         const taxAmount = subtotal * item.taxRate;
         const total = subtotal + taxAmount;
         return { ...item, subtotal, taxAmount, total };
@@ -152,7 +168,8 @@ const SalesPage: React.FC = () => {
                 items: cart.map(i => ({
                     productId: i.productId,
                     quantity: i.quantity,
-                    unitPrice: i.unitPrice
+                    unitPrice: i.unitPrice,
+                    discount: i.discount
                 }))
             });
             
@@ -295,7 +312,20 @@ const SalesPage: React.FC = () => {
                                 <div key={item.productId} className="flex justify-between items-start pb-3 border-b border-gray-100 last:border-0">
                                     <div className="flex-1">
                                         <h4 className="text-sm font-medium text-gray-800 line-clamp-1">{item.productName}</h4>
-                                        <div className="text-xs text-gray-500">${item.unitPrice} x {item.quantity}</div>
+                                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                                            <div className="text-xs text-gray-500">${item.unitPrice} x {item.quantity}</div>
+                                            <div className="flex items-center gap-1 bg-gray-50 rounded px-1 border border-gray-100">
+                                                 <span className="text-[10px] text-gray-400">Desc%</span>
+                                                 <input 
+                                                    type="number" 
+                                                    min="0" 
+                                                    max="100" 
+                                                    value={item.discount || 0}
+                                                    onChange={(e) => updateDiscount(item.productId, parseFloat(e.target.value))}
+                                                    className="w-10 text-xs border-none bg-transparent p-0 text-right focus:ring-0"
+                                                 />
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
                                         <span className="font-bold text-gray-800">${item.total.toFixed(2)}</span>

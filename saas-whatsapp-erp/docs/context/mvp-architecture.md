@@ -1,7 +1,3 @@
----
-trigger: always_on
----
-
 # MVP ARCHITECTURE – WhatsApp-First Sales SaaS (MongoDB)
 
 ## Objetivo
@@ -69,7 +65,7 @@ El MVP prioriza:
         ├── Mongo
         ├── Repositories
         └── Integrations
-```
+
 
 ```text
 /frontend
@@ -83,6 +79,7 @@ El MVP prioriza:
  │   ├── components
  │   ├── services (API)
  │   └── auth
+
 ```
 
 ---

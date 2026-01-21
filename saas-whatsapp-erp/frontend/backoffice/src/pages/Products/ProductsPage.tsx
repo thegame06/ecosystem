@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { Product, ProductType, CreateProductRequest, PRODUCT_TYPE_LABELS } from '../../types/product';
+import { Product, ProductType, CreateProductRequest, UpdateProductRequest, PRODUCT_TYPE_LABELS } from '../../types/product';
 import { productService } from '../../services/productService';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
@@ -11,13 +11,19 @@ const ProductsPage: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    
+
     // Form State
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<CreateProductRequest>({
         name: '',
+        description: '',
         type: ProductType.Tangible,
         price: 0,
+        costPrice: 0,
         taxRate: 0.15,
+        imageUrl: '',
+        unit: 'pza',
+        discount: 0,
         trackInventory: false,
         stock: 0
     });
@@ -40,13 +46,38 @@ const ProductsPage: React.FC = () => {
     };
 
     const handleOpenModal = () => {
+        setEditingId(null);
         setFormData({
             name: '',
+            description: '',
             type: ProductType.Tangible,
             price: 0,
-            taxRate: 0.15,
+            costPrice: 0,
+            taxRate: 0.16,
+            imageUrl: '',
+            unit: 'pza',
+            discount: 0,
             trackInventory: false,
             stock: 0
+        });
+        setErrorMsg(null);
+        setIsModalOpen(true);
+    };
+
+    const handleEditProduct = (product: Product) => {
+        setEditingId(product.id);
+        setFormData({
+            name: product.name,
+            description: product.description || '',
+            type: product.type,
+            price: product.price,
+            costPrice: product.costPrice || 0,
+            taxRate: product.taxRate || 0.16,
+            imageUrl: product.imageUrl || '',
+            unit: product.unit || 'pza',
+            discount: product.discount || 0,
+            trackInventory: product.trackInventory,
+            stock: product.stock
         });
         setErrorMsg(null);
         setIsModalOpen(true);
@@ -57,22 +88,34 @@ const ProductsPage: React.FC = () => {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const request: CreateProductRequest = {
+            const commonData = {
                 ...formData,
                 price: Number(formData.price),
+                costPrice: Number(formData.costPrice),
+                taxRate: Number(formData.taxRate),
+                discount: Number(formData.discount),
                 stock: formData.trackInventory ? Number(formData.stock || 0) : 0,
-                taxRate: Number(formData.taxRate)
             };
-            await productService.create(request);
+
+            if (editingId) {
+                const updateRequest: UpdateProductRequest = {
+                    ...commonData,
+                    id: editingId
+                };
+                await productService.update(editingId, updateRequest);
+            } else {
+                await productService.create(commonData);
+            }
+
             await loadProducts();
             handleCloseModal();
         } catch (error: any) {
-            console.error('Error creating product:', error);
-            setErrorMsg(error?.response?.data?.message || 'Error al crear producto');
+            console.error('Error saving product:', error);
+            setErrorMsg(error?.response?.data?.message || 'Error al guardar producto');
         }
     };
 
-    const filteredProducts = products.filter(p => 
+    const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -137,8 +180,8 @@ const ProductsPage: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                        ${product.type === ProductType.TANGIBLE ? 'bg-blue-100 text-blue-800' : 
-                                          product.type === ProductType.SERVICE ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}`}>
+                                        ${product.type === ProductType.Tangible ? 'bg-blue-100 text-blue-800' :
+                                            product.type === ProductType.Service ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}`}>
                                         {product.type}
                                     </span>
                                 </td>
@@ -155,7 +198,10 @@ const ProductsPage: React.FC = () => {
                                     )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button className="text-blue-600 hover:text-blue-900 mr-4">
+                                    <button
+                                        onClick={() => handleEditProduct(product)}
+                                        className="text-blue-600 hover:text-blue-900 mr-4"
+                                    >
                                         <Pencil size={18} />
                                     </button>
                                     <button className="text-red-600 hover:text-red-900">
@@ -173,21 +219,27 @@ const ProductsPage: React.FC = () => {
                 )}
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Nuevo Producto">
+            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingId ? "Editar Producto" : "Nuevo Producto"}>
                 <form onSubmit={handleSave} className="space-y-4">
-                    <Input 
-                        label="Nombre" 
-                        required 
+                    <Input
+                        label="Nombre"
+                        required
                         value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     />
-                    
+
+                    <Input
+                        label="Descripción"
+                        value={formData.description || ''}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                        <select 
+                        <select
                             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             value={formData.type}
-                            onChange={(e) => setFormData({...formData, type: Number(e.target.value) as ProductType})}
+                            onChange={(e) => setFormData({ ...formData, type: Number(e.target.value) as ProductType })}
                         >
                             {Object.values(ProductType)
                                 .filter(v => typeof v === 'number')
@@ -196,36 +248,86 @@ const ProductsPage: React.FC = () => {
                                 ))}
                         </select>
                     </div>
-            {errorMsg && (
-                <div className="text-red-600 text-sm font-semibold mb-2">{errorMsg}</div>
-            )}
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Input 
-                            label="Precio" 
-                            type="number" 
-                            step="0.01" 
+                        <Input
+                            label="Precio Venta"
+                            type="number"
+                            step="0.01"
                             required
                             value={formData.price}
-                            onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value)})}
+                            onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
                         />
-                        <Input 
-                            label="IVA (%)" 
-                            type="number" 
-                            step="0.01" 
-                            value={formData.taxRate}
-                            onChange={(e) => setFormData({...formData, taxRate: parseFloat(e.target.value)})}
+                        <Input
+                            label="Costo"
+                            type="number"
+                            step="0.01"
+                            value={formData.costPrice || 0}
+                            onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })}
                         />
                     </div>
 
-                    {formData.type !== ProductType.SERVICE && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input
+                            label="IVA (0.0 - 1.0)"
+                            type="number"
+                            step="0.01"
+                            value={formData.taxRate}
+                            onChange={(e) => setFormData({ ...formData, taxRate: parseFloat(e.target.value) })}
+                        />
+                        <Input
+                            label="Descuento (%)"
+                            type="number"
+                            step="0.01"
+                            value={formData.discount || 0}
+                            onChange={(e) => setFormData({ ...formData, discount: parseFloat(e.target.value) })}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Input
+                                label="Unidad"
+                                list="unit-options"
+                                value={formData.unit || ''}
+                                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                                placeholder="Seleccione o escriba..."
+                            />
+                            <datalist id="unit-options">
+                                <option value="pza">Pieza</option>
+                                <option value="kg">Kilogramo</option>
+                                <option value="mt">Metro</option>
+                                <option value="lt">Litro</option>
+                                <option value="cja">Caja</option>
+                                <option value="hora">Hora</option>
+                                <option value="svc">Servicio</option>
+                            </datalist>
+                        </div>
+                        <div>
+                            <Input
+                                label="Imagen URL"
+                                value={formData.imageUrl || ''}
+                                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                            />
+                            {formData.imageUrl && (
+                                <img
+                                    src={formData.imageUrl}
+                                    alt="Preview"
+                                    className="mt-2 h-20 w-20 object-cover rounded border border-gray-200"
+                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    {formData.type !== ProductType.Service && (
                         <div className="flex items-center my-4">
                             <input
                                 id="track-inventory"
                                 type="checkbox"
                                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                 checked={formData.trackInventory}
-                                onChange={(e) => setFormData({...formData, trackInventory: e.target.checked})}
+                                onChange={(e) => setFormData({ ...formData, trackInventory: e.target.checked })}
                             />
                             <label htmlFor="track-inventory" className="ml-2 block text-sm text-gray-900">
                                 Controlar Inventario
@@ -234,12 +336,16 @@ const ProductsPage: React.FC = () => {
                     )}
 
                     {formData.trackInventory && (
-                        <Input 
-                            label="Stock Inicial" 
-                            type="number" 
+                        <Input
+                            label="Stock"
+                            type="number"
                             value={formData.stock || 0}
-                            onChange={(e) => setFormData({...formData, stock: parseInt(e.target.value)})}
+                            onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
                         />
+                    )}
+
+                    {errorMsg && (
+                        <div className="text-red-600 text-sm font-semibold mb-2">{errorMsg}</div>
                     )}
 
                     <div className="pt-4 flex justify-end gap-3">
@@ -247,7 +353,7 @@ const ProductsPage: React.FC = () => {
                             Cancelar
                         </Button>
                         <Button type="submit" className="w-auto">
-                            Guardar
+                            {editingId ? "Actualizar" : "Guardar"}
                         </Button>
                     </div>
                 </form>

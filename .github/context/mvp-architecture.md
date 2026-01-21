@@ -2,15 +2,22 @@
 
 ## Objetivo
 Construir un MVP vendible en semanas, usando MongoDB Free Tier,
+permitiendo a las PYMEs vender, facturar y comunicarse por WhatsApp,
 sin bloquear la evolución al modelo unicornio.
 
 ---
 
 ## 1️⃣ Principio fundador
 
-Arquitectura simple, clara y disciplinada.
-MongoDB se usa como base de datos de documentos,
-NO como un cajón sin reglas.
+Arquitectura simple, clara y disciplinada.  
+MongoDB se usa como base de datos de documentos,  
+**NO como un cajón sin reglas**.
+
+El MVP prioriza:
+- Flujo real de ventas
+- Cálculos correctos de dinero
+- Costos controlados
+- Simplicidad operativa
 
 ---
 
@@ -20,7 +27,7 @@ NO como un cajón sin reglas.
 - .NET 10 (or latest LTS available in workspace)
 - ASP.NET Web API
 - Clean Architecture (ligera)
-- MongoDB (Free Tier)
+- MongoDB Atlas (Free Tier)
 - MongoDB Driver oficial
 
 ### Frontend
@@ -58,7 +65,7 @@ NO como un cajón sin reglas.
         ├── Mongo
         ├── Repositories
         └── Integrations
-```
+
 
 ```text
 /frontend
@@ -72,6 +79,7 @@ NO como un cajón sin reglas.
  │   ├── components
  │   ├── services (API)
  │   └── auth
+
 ```
 
 ---
@@ -82,8 +90,11 @@ NO como un cajón sin reglas.
 - `_id`
 - `name`
 - `country`
-- `taxRate`
+- `taxRate`                // IVA %
+- `isTaxEnabled`           // permite ventas/facturas sin IVA
 - `invoiceSequence`
+- `plan`                   // Starter | Pro | Growth
+- `billingCycleStart`      // inicio del ciclo de límites
 - `createdAt`
 
 **Índices**: `name`, `country`
@@ -95,7 +106,7 @@ NO como un cajón sin reglas.
 - `companyId`
 - `email`
 - `passwordHash`
-- `role`
+- `role`                   // Admin | Seller
 - `createdAt`
 
 **Índices**: `companyId`, `email` (unique)
@@ -106,11 +117,13 @@ NO como un cajón sin reglas.
 - `_id`
 - `companyId`
 - `name`
-- `phone`
+- `phones[]`               // WhatsApp principal primero
+- `taxId` (opcional)
+- `whatsappConsent`        // true / false
 - `currentState`
 - `createdAt`
 
-**Índices**: `companyId`, `phone`
+**Índices**: `companyId`, `phones`
 
 ---
 
@@ -127,11 +140,29 @@ NO como un cajón sin reglas.
 
 ---
 
+### Product (products)
+- `_id`
+- `companyId`
+- `name`
+- `basePrice`              // precio por unidad
+- `unit`                   // Unit, Hour, Day, Kg, etc
+- `isTaxable`              // true / false
+- `allowDiscount`          // true / false
+- `type`                   // Tangible | Service | Rental
+- `isActive`
+- `createdAt`
+
+**Índices**: `companyId`, `name`
+
+---
+
 ### Sale (sales)
 - `_id`
 - `companyId`
 - `customerId`
 - `items[]`
+- `subtotal`
+- `taxTotal`
 - `total`
 - `state`
 - `createdAt`
@@ -140,34 +171,79 @@ NO como un cajón sin reglas.
 
 ---
 
+### SaleItem (embebido en Sale.items[])
+- `productId`
+- `nameSnapshot`
+- `unit`
+- `quantity`
+- `unitPrice`
+- `discountType`           // None | Fixed | Percentage
+- `discountValue`
+- `discountedSubtotal`
+- `taxAmount`
+- `total`
+
+---
+
 ### Invoice (invoices)
 - `_id`
 - `companyId`
 - `saleId`
 - `number`
+- `subtotal`
+- `taxTotal`
 - `total`
 - `status`
+- `sentAt`
+- `paidAt`
 - `createdAt`
 
 **Índices**: `companyId`, `saleId`, `number`
 
 ---
 
-### Product (products)
+### UsageCounters (usage_counters)
 - `_id`
 - `companyId`
-- `name`
-- `price`
-- `taxRate`
+- `period`                 // YYYY-MM
+- `messagesUsed`
+- `conversationsUsed`
+- `invoicesUsed`
+- `usersUsed`
 - `createdAt`
 
-**Índices**: `companyId`, `name`
+**Índices**: `companyId + period` (unique)
+
+---
+
+### WhatsAppNumber (whatsapp_numbers)
+- `_id`
+- `companyId`
+- `phoneNumber`
+- `providerType`           // BYON | External
+- `isActive`
+- `createdAt`
+
+**Índices**: `companyId`, `phoneNumber`
+
+---
+
+### Event (events)
+- `_id`
+- `companyId`
+- `type`
+- `entityType`
+- `entityId`
+- `payload`
+- `createdAt`
+
+**Índices**: `companyId`, `type`, `createdAt`
 
 ---
 
 ## 5️⃣ Estados comerciales (MVP)
 
-1. LEAD
-2. SALE_CREATED
-3. INVOICED
-4. PAID
+1. LEAD  
+2. SALE_CREATED  
+3. INVOICED  
+4. PAID  

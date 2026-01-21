@@ -1,7 +1,3 @@
----
-trigger: always_on
----
-
 # PRODUCT DEFINITION – SaaS Ventas + Facturación + WhatsApp
 
 ## Visión
@@ -53,7 +49,7 @@ Diferenciador clave:
 
 ### Identity & Access
 - Login email/password
-- Google / Microsoft
+- Google / Microsoft (futuro)
 - Roles y permisos
 - Seguridad por módulo
 - Multi-tenant por empresa
@@ -104,7 +100,7 @@ Diferenciador clave:
 **Tipos conceptuales:**
 - Tangible (productos físicos)
 - Servicio (trabajo, mano de obra, consultoría)
-- Alquilable (renta por tiempo)
+- Alquilable (renta por tiempo – futuro)
 
 **Unidades de medida:**
 - Unidad
@@ -204,6 +200,16 @@ Diferenciador clave:
 **MVP:**
 - Solo emisión de eventos
 - No automatización compleja
+
+---
+
+### Public Web
+- Página pública por empresa
+- Catálogo
+- Reservas
+- Botón WhatsApp
+
+**MVP:** NO incluido
 
 ---
 

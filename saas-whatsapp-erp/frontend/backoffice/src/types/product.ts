@@ -19,6 +19,9 @@ export interface Product {
     price: number;
     costPrice?: number;
     taxRate?: number;
+    imageUrl?: string;
+    unit?: string;
+    discount?: number;
     trackInventory: boolean;
     stock: number;
     rentalPricePerDay?: number;
@@ -37,6 +40,9 @@ export interface CreateProductRequest {
     price: number;
     costPrice?: number;
     taxRate: number; // e.g. 0.15 for 15%
+    imageUrl?: string;
+    unit?: string;
+    discount?: number;
     trackInventory: boolean;
     stock?: number;
 }

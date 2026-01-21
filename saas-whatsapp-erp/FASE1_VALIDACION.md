@@ -37,27 +37,44 @@ Según los documentos de arquitectura, el MVP debe cumplir:
 ### 🟢 **BACKEND - 70% COMPLETADO**
 
 #### ✅ **COMPLETADO**
-- **Infraestructura**: Clean Architecture, MongoDB, JWT
-- **Documentos**: 7/7 documentos core implementados
-  - Company, User, Customer, Product, Sale, Invoice, Conversation
-- **Repositorios**: 7/7 con índices optimizados
-- **Autenticación**: Register, Login, Me (JWT)
-- **Multi-Tenancy**: Implementado en todos los niveles
-- **API**: 2/6 controllers (Auth, Products)
+- Infraestructura: Clean Architecture, MongoDB, JWT
+- Documentos: 7/7 documentos core implementados (Company, User, Customer, Product, Sale, Invoice, Conversation)
+- Repositorios: 7/7 con índices optimizados
+- Autenticación: Register, Login, Me (JWT)
+- Multi-Tenancy: Implementado en todos los niveles
+- API: 2/6 controllers (Auth, Products)
 
 #### ❌ **PENDIENTE - CRÍTICO PARA MVP**
-1. **Controllers Core** (4 controllers):
-   - ❌ `CustomersController` - CRUD clientes
-   - ❌ `SalesController` - Crear ventas, POS
-   - ❌ `InvoicesController` - Generar facturas
-   - ❌ `ConversationsController` - WhatsApp (CORE)
+1. Controllers Core (4 controllers):
+   - ❌ CustomersController - CRUD clientes
+   - ❌ SalesController - Crear ventas, POS
+   - ❌ InvoicesController - Generar facturas
+   - ❌ ConversationsController - WhatsApp (CORE)
 
-2. **Servicios de Negocio** (3 servicios):
-   - ❌ `SaleService` - Calcular totales, validar
-   - ❌ `InvoiceService` - Números secuenciales, estados
-   - ❌ `WhatsAppService` - Integración WhatsApp API
+2. Servicios de Negocio (3 servicios):
+   - ❌ SaleService - Calcular totales, validar
+   - ❌ InvoiceService - Números secuenciales, estados
+   - ❌ WhatsAppService - Integración WhatsApp API
 
-3. **SaaS Features**:
+3. SaaS Features:
+
+---
+
+### 🟡 **FRONTEND - 50% COMPLETADO**
+
+#### ✅ **COMPLETADO**
+- Base React + TypeScript + Vite, ESLint activo
+- Productos: listado, creación, validación de tipo (label correcto), feedback de error en creación
+- Enums y tipos alineados con backend en productos
+
+#### ❌ **PENDIENTE - CRÍTICO PARA MVP**
+- Edición de productos (modal, guardar cambios)
+- Imagen de producto (campo y preview)
+- Unidades configurables según tipo (unidad, día, hora)
+- Opción de descuento y venta sin IVA
+- Flujos completos de ventas, clientes y autenticación real
+- Feedback visual avanzado y validaciones en todos los módulos
+- Sincronización total de campos y acciones con backend
    - ❌ `Subscription` document
    - ❌ `PlanLimits` control
    - ❌ Middleware de límites

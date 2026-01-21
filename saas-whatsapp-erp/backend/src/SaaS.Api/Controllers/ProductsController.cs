@@ -101,6 +101,9 @@ public class ProductsController : ControllerBase
                 Price = request.Price,
                 CostPrice = request.CostPrice,
                 TaxRate = request.TaxRate,
+                ImageUrl = request.ImageUrl,
+                Unit = request.Unit,
+                Discount = request.Discount,
                 TrackInventory = request.TrackInventory,
                 StockQuantity = request.Stock,
                 RentalPricePerDay = request.RentalPricePerDay,
@@ -149,6 +152,9 @@ public class ProductsController : ControllerBase
             product.Price = request.Price;
             product.CostPrice = request.CostPrice;
             product.TaxRate = request.TaxRate;
+            product.ImageUrl = request.ImageUrl;
+            product.Unit = request.Unit;
+            product.Discount = request.Discount;
             product.TrackInventory = request.TrackInventory;
             product.StockQuantity = request.Stock;
             product.RentalPricePerDay = request.RentalPricePerDay;
@@ -211,6 +217,9 @@ public class ProductsController : ControllerBase
             Price = product.Price,
             CostPrice = product.CostPrice,
             TaxRate = product.TaxRate,
+            ImageUrl = product.ImageUrl,
+            Unit = product.Unit,
+            Discount = product.Discount,
             TrackInventory = product.TrackInventory,
             Stock = product.StockQuantity,
             RentalPricePerDay = product.RentalPricePerDay,

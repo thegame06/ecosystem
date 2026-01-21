@@ -1,5 +1,9 @@
+```chatagent
 ---
-description: Mobile Agent - React Native Specialist
+description: 'Mobile Agent - React Native Specialist'
+tools: []
+context:
+  - product-definition.md
 ---
 
 # AGENT – MOBILE (REACT NATIVE)
@@ -20,3 +24,4 @@ Mobile Engineer using React Native.
 
 ## Enfoque
 Velocidad. El usuario está en la calle o frente al cliente.
+```

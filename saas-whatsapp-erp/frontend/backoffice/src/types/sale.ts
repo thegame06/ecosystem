@@ -3,6 +3,10 @@ export interface SaleItem {
     productName: string;
     quantity: number;
     unitPrice: number;
+    discount: number; // Percentage 0-1 or Amount? Let's use Amount for simplicity or Percentage? 
+                     // MVP says "Discounts must be visible". Let's assume % for now or value?
+                     // Usually % is easier 0.10. 
+                     // But let's check Product definition logic again. "Descuento (%)" is in Product.
     taxRate: number; // 0 to 1 (e.g., 0.21)
     subtotal: number;
     taxAmount: number;
@@ -30,6 +34,7 @@ export interface CreateSaleDto {
         productId: string;
         quantity: number;
         unitPrice: number; // Snapshot price
+        discount?: number; // Discount %
     }[];
     paymentMethod: 'cash' | 'transfer' | 'card';
 }

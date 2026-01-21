@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Pencil, Trash2, Search, Phone, Mail, MapPin } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Search, Phone, Mail, MapPin, MessageCircle } from 'lucide-react';
 import { Customer, CreateCustomerRequest } from '../../types/customer';
 import { customerService } from '../../services/customerService';
 import Button from '../../components/Common/Button';
@@ -15,6 +15,7 @@ interface CustomerFormData {
     address: string;
     city: string;
     notes: string;
+    whatsappConsent: boolean;
 }
 
 const CustomersPage: React.FC = () => {
@@ -31,7 +32,8 @@ const CustomersPage: React.FC = () => {
         email: '',
         address: '',
         city: '',
-        notes: ''
+        notes: '',
+        whatsappConsent: true
     });
 
     useEffect(() => {
@@ -58,7 +60,8 @@ const CustomersPage: React.FC = () => {
             email: '',
             address: '',
             city: '',
-            notes: ''
+            notes: '',
+            whatsappConsent: true
         });
         setIsModalOpen(true);
     };
@@ -79,7 +82,8 @@ const CustomersPage: React.FC = () => {
                 name: fullName || 'Cliente Sin Nombre',
                 phone: formData.phone,
                 email: formData.email || undefined,
-                address: fullAddress || undefined
+                address: fullAddress || undefined,
+                whatsappConsent: formData.whatsappConsent
             };
 
             await customerService.create(request);
@@ -162,6 +166,9 @@ const CustomersPage: React.FC = () => {
                                 <div className="mt-1 flex items-center text-sm text-gray-500">
                                     <Phone size={14} className="mr-1.5 flex-shrink-0" />
                                     {customer.phone}
+                                    {customer.whatsappConsent && (
+                                        <MessageCircle size={14} className="ml-2 text-green-500" title="WhatsApp Consent" />
+                                    )}
                                 </div>
                                 {customer.email && (
                                     <div className="mt-1 flex items-center text-sm text-gray-500">
@@ -229,6 +236,19 @@ const CustomersPage: React.FC = () => {
                         value={formData.phone}
                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     />
+
+                    <div className="flex items-center my-2">
+                        <input
+                            id="whatsapp-consent"
+                            type="checkbox"
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            checked={formData.whatsappConsent}
+                            onChange={(e) => setFormData({...formData, whatsappConsent: e.target.checked})}
+                        />
+                        <label htmlFor="whatsapp-consent" className="ml-2 block text-sm text-gray-900">
+                            Tiene consentimiento para recibir mensajes de WhatsApp
+                        </label>
+                    </div>
 
                     <Input 
                         label="Email (Opcional)" 

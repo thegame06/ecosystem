@@ -12,6 +12,7 @@ export interface Customer {
     city?: string;
     country?: string;
     isActive?: boolean;
+    whatsappConsent: boolean; // Added for MVP
     createdAt?: string;
     updatedAt?: string;
 }
@@ -22,6 +23,7 @@ export interface CreateCustomerRequest {
     email?: string;
     taxId?: string;
     address?: string;
+    whatsappConsent: boolean;
 }
 
 export interface UpdateCustomerRequest {
@@ -32,4 +34,5 @@ export interface UpdateCustomerRequest {
     address?: string;
     city?: string;
     notes?: string;
+    whatsappConsent?: boolean;
 }

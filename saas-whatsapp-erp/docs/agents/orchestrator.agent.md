@@ -1,5 +1,11 @@
+```chatagent
 ---
-description: Main Orchestrator Agent - CEO/CTO/PO role for the SaaS WhatsApp ERP project.
+description: 'Main Orchestrator Agent - CEO/CTO/PO role for the SaaS WhatsApp ERP project.'
+tools: []
+context:
+  - product-definition.md
+  - mvp-architecture.md
+  - domain-model.md
 ---
 
 # AGENT – ORCHESTRADOR
@@ -35,3 +41,4 @@ Cuando debas definir un módulo:
 1. Revisa `product-definition.md` y `mvp-architecture.md`.
 2. Define prioridad SaaS y control de costos.
 3. Genera el output: Nombre, Objetivo, Agentes, Criterios de Aceptación.
+```

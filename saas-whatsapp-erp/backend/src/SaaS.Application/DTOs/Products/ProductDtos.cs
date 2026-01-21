@@ -10,6 +10,9 @@ public class CreateProductRequest
     public decimal Price { get; set; }
     public decimal? CostPrice { get; set; }
     public decimal? TaxRate { get; set; }
+    public string? ImageUrl { get; set; }
+    public string? Unit { get; set; }
+    public decimal? Discount { get; set; }
     public bool TrackInventory { get; set; } = false;
     public decimal Stock { get; set; } = 0;
     public decimal? RentalPricePerDay { get; set; }
@@ -24,6 +27,9 @@ public class UpdateProductRequest
     public decimal Price { get; set; }
     public decimal? CostPrice { get; set; }
     public decimal? TaxRate { get; set; }
+    public string? ImageUrl { get; set; }
+    public string? Unit { get; set; }
+    public decimal? Discount { get; set; }
     public bool TrackInventory { get; set; }
     public decimal Stock { get; set; }
     public decimal? RentalPricePerDay { get; set; }
@@ -41,6 +47,9 @@ public class ProductResponse
     public decimal Price { get; set; }
     public decimal? CostPrice { get; set; }
     public decimal? TaxRate { get; set; }
+    public string? ImageUrl { get; set; }
+    public string? Unit { get; set; }
+    public decimal? Discount { get; set; }
     public bool TrackInventory { get; set; }
     public decimal Stock { get; set; }
     public decimal? RentalPricePerDay { get; set; }
