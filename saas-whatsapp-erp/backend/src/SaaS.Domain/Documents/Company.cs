@@ -36,4 +36,22 @@ public class Company
 
     [BsonElement("isActive")]
     public bool IsActive { get; set; } = true;
+
+    [BsonElement("whatsAppSettings")]
+    public WhatsAppSettings? WhatsAppSettings { get; set; }
+}
+
+public class WhatsAppSettings
+{
+    [BsonElement("phoneNumberId")]
+    public string PhoneNumberId { get; set; } = string.Empty;
+
+    [BsonElement("businessAccountId")]
+    public string BusinessAccountId { get; set; } = string.Empty;
+
+    [BsonElement("accessToken")]
+    public string AccessToken { get; set; } = string.Empty;
+
+    [BsonElement("verifyToken")]
+    public string VerifyToken { get; set; } = "saas-verify-token";
 }

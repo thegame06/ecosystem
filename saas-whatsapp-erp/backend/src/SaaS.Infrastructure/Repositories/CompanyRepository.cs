@@ -32,8 +32,19 @@ public class CompanyRepository : ICompanyRepository
         return await _companies.Find(c => c.Id == id).FirstOrDefaultAsync();
     }
 
-    public async Task<Company?> GetByNameAsync(string name)
+    public async Task<Company?> GetByPhoneNumberIdAsync(string phoneNumberId)
     {
-        return await _companies.Find(c => c.Name == name).FirstOrDefaultAsync();
+        return await _companies.Find(c => c.WhatsAppSettings != null && c.WhatsAppSettings.PhoneNumberId == phoneNumberId).FirstOrDefaultAsync();
+    }
+
+    public async Task UpdateAsync(Company company)
+    {
+        await _companies.ReplaceOneAsync(c => c.Id == company.Id, company);
+    }
+
+    public async Task UpdatePlanAsync(string companyId, SaaS.Domain.Enums.PlanType plan)
+    {
+        var update = Builders<Company>.Update.Set(c => c.Plan, plan);
+        await _companies.UpdateOneAsync(c => c.Id == companyId, update);
     }
 }

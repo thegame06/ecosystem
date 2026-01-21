@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../services/authService';
-import { Lock, Mail, ArrowRight, CheckCircle2, Building, User } from 'lucide-react';
+import { Lock, Mail, ArrowRight, CheckCircle2, Building, User, MessageSquare } from 'lucide-react';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,11 +29,18 @@ const RegisterPage: React.FC = () => {
 
     try {
       const response = await authService.register(formData);
-      localStorage.setItem('token', response.data.token);
-      navigate('/whatsapp');
+      // Backend automatically logs in or we use the token returned
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        // Redirect to dashboard (root) as requested
+        navigate('/');
+      } else {
+         // Fallback if no token is returned immediately (e.g. email verification required)
+         navigate('/login');
+      }
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || 'Error en el registro. Intente de nuevo.');
+      setError(err.response?.data?.message || 'Error en el registro. Verifique sus datos e intente nuevamente.');
     } finally {
       setIsLoading(false);
     }

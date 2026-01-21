@@ -67,4 +67,11 @@ public class CompaniesController : ControllerBase
         var limits = PlanLimits.GetLimits(company.Plan);
         return Ok(limits);
     }
+
+    [HttpPut("plan")]
+    public async Task<ActionResult> UpdatePlan([FromBody] SaaS.Domain.Enums.PlanType plan)
+    {
+        await _companyRepository.UpdatePlanAsync(GetCompanyId(), plan);
+        return Ok(new { message = $"Plan actualizado a {plan}" });
+    }
 }

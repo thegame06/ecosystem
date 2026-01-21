@@ -31,7 +31,9 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
         try {
             setIsLoading(true);
             const response = await productService.getAll();
-            setProducts(response.data);
+            // Handle OData response structure
+            const items = response.data?.result || response.data || [];
+            setProducts(items.filter((p: Product) => p.isActive));
         } catch (err) {
             console.error(err);
         } finally {
@@ -72,10 +74,11 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
         let taxTotal = 0;
 
         cart.forEach(item => {
-            const lineSubtotal = item.product.basePrice * item.quantity;
+            const lineSubtotal = item.product.price * item.quantity;
             subtotal += lineSubtotal;
-            if (item.product.isTaxable) {
-                taxTotal += lineSubtotal * 0.15; // Assume 15% for NI
+            // Product is taxable if taxRate is defined and > 0
+            if (item.product.taxRate && item.product.taxRate > 0) {
+                taxTotal += lineSubtotal * item.product.taxRate;
             }
         });
 
@@ -88,6 +91,7 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
 
     const totals = calculateTotals();
 
+
     const handleSubmit = async () => {
         if (cart.length === 0) return;
         setIsSubmitting(true);
@@ -97,21 +101,25 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                 items: cart.map(item => ({
                     productId: item.product.id,
                     quantity: item.quantity,
-                    unitPrice: item.product.basePrice,
-                    taxRate: item.product.isTaxable ? 0.15 : 0
+                    unitPrice: item.product.price,
                 }))
             };
             const response = await saleService.create(request);
-            onSuccess(response.data.id);
+            onSuccess(response.id); // response is now SaleResponse, not wrapped in .data
             setCart([]);
             onClose();
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert('Error al crear la venta. Verifique los límites de su plan.');
+            // Show specific error message based on error code
+            const errorMessage = err.code === 'PLAN_LIMIT_REACHED'
+                ? 'Has alcanzado el límite de tu plan. Actualiza para continuar.'
+                : err.message || 'Error al crear la venta. Intenta nuevamente.';
+            alert(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
     };
+
 
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
@@ -191,8 +199,8 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                                         <div className="flex-1 min-w-0 text-left">
                                             <h4 className="font-bold text-slate-800 truncate">{product.name}</h4>
                                             <div className="flex items-center justify-between mt-1">
-                                                <span className="text-lg font-black text-slate-900">${product.basePrice.toFixed(2)}</span>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{product.unit}</span>
+                                                <span className="text-lg font-black text-slate-900">${product.price.toFixed(2)}</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{product.unit || 'unidad'}</span>
                                             </div>
                                         </div>
                                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-primary-600 group-hover:text-white transition-all">
@@ -247,8 +255,8 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                                             </button>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xs font-bold text-slate-400 block">${item.product.basePrice.toFixed(2)} c/u</span>
-                                            <span className="text-base font-black text-slate-900">${(item.product.basePrice * item.quantity).toFixed(2)}</span>
+                                            <span className="text-xs font-bold text-slate-400 block">${item.product.price.toFixed(2)} c/u</span>
+                                            <span className="text-base font-black text-slate-900">${(item.product.price * item.quantity).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>

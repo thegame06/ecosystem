@@ -9,16 +9,19 @@ public class AuthService : IAuthService
 {
     private readonly ICompanyRepository _companyRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IJwtTokenGenerator _jwtTokenGenerator; // Fixed missing field
+    private readonly IPlanService _planService;
 
     public AuthService(
         ICompanyRepository companyRepository,
         IUserRepository userRepository,
-        IJwtTokenGenerator jwtTokenGenerator)
+        IJwtTokenGenerator jwtTokenGenerator,
+        IPlanService planService)
     {
         _companyRepository = companyRepository;
         _userRepository = userRepository;
         _jwtTokenGenerator = jwtTokenGenerator;
+        _planService = planService;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -57,6 +60,9 @@ public class AuthService : IAuthService
         };
 
         user = await _userRepository.CreateAsync(user);
+
+        // Registrar consumo inicial de usuario
+        await _planService.TrackConsumptionAsync(company.Id, "users");
 
         // Generar token
         var token = _jwtTokenGenerator.GenerateToken(user.Id, user.CompanyId, user.Email, user.Role);

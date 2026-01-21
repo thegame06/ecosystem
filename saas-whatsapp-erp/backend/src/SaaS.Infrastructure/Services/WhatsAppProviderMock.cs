@@ -12,9 +12,9 @@ public class WhatsAppProviderMock : IWhatsAppProvider
         _logger = logger;
     }
 
-    public async Task<bool> SendTextMessageAsync(string fromNumber, string toNumber, string message)
+    public async Task<bool> SendTextMessageAsync(string companyId, string toNumber, string message)
     {
-        _logger.LogInformation("WhatsApp SEND [BYON] From: {From}, To: {To}, Message: {Message}", fromNumber, toNumber, message);
+        _logger.LogInformation("WhatsApp SEND [BYON] Company: {CompanyId}, To: {To}, Message: {Message}", companyId, toNumber, message);
         
         // Simular latencia de red
         await Task.Delay(200);
@@ -22,10 +22,10 @@ public class WhatsAppProviderMock : IWhatsAppProvider
         return true;
     }
 
-    public async Task<bool> SendPdfAsync(string fromNumber, string toNumber, byte[] pdfBytes, string fileName)
+    public async Task<bool> SendPdfAsync(string companyId, string toNumber, byte[] pdfBytes, string fileName)
     {
-        _logger.LogInformation("WhatsApp SEND PDF [BYON] From: {From}, To: {To}, File: {FileName}, Size: {Size} bytes", 
-            fromNumber, toNumber, fileName, pdfBytes.Length);
+        _logger.LogInformation("WhatsApp SEND PDF [BYON] Company: {CompanyId}, To: {To}, File: {FileName}, Size: {Size} bytes", 
+            companyId, toNumber, fileName, pdfBytes.Length);
         
         // Simular latencia
         await Task.Delay(500);

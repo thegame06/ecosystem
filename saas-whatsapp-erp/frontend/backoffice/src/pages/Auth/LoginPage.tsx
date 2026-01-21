@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../services/authService';
-import { Lock, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Lock, Mail, ArrowRight, CheckCircle2, MessageSquare } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ const LoginPage: React.FC = () => {
     try {
       const response = await authService.login({ email, password });
       localStorage.setItem('token', response.data.token);
-      navigate('/whatsapp');
+      navigate('/');
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Credenciales inválidas. Revise su email y contraseña.');

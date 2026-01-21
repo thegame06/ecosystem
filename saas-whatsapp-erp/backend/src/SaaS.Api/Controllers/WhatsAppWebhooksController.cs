@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SaaS.Application.DTOs.WhatsApp; // New DTO namespace
 using SaaS.Application.Interfaces;
 using SaaS.Domain.Enums;
 
@@ -10,34 +11,42 @@ public class WhatsAppWebhooksController : ControllerBase
 {
     private readonly IConversationService _conversationService;
     private readonly IPlanService _planService;
+    private readonly ICompanyRepository _companyRepository; // Inject CompanyRepository
 
-    public WhatsAppWebhooksController(IConversationService conversationService, IPlanService planService)
+    public WhatsAppWebhooksController(IConversationService conversationService, IPlanService planService, ICompanyRepository companyRepository)
     {
         _conversationService = conversationService;
         _planService = planService;
+        _companyRepository = companyRepository;
     }
 
     /// <summary>
-    /// Recibe mensajes de WhatsApp (BYON)
+    /// Recibe mensajes de WhatsApp (Oficial API)
     /// </summary>
     [HttpPost("{companyId}")]
-    public async Task<IActionResult> ReceiveMessage(string companyId, [FromBody] WhatsAppMessagePayload payload)
+    public async Task<IActionResult> ReceiveMessage(string companyId, [FromBody] WhatsAppWebhookPayload payload)
     {
-        // 1. Validar límites de mensajes entrantes (Opcional, pero bueno para el SaaS)
-        // En el MVP, los mensajes entrantes a veces no se cuentan contra el límite, 
-        // pero vamos a trackear la conversación si es nueva.
-        
         try 
         {
-            // 2. Procesar mensaje y actualizar conversación
-            // Este es un flujo simplificado para la demo
-            await _conversationService.HandleIncomingMessageAsync(companyId, payload.From, payload.Text);
+            var entry = payload.Entry?.FirstOrDefault();
+            var change = entry?.Changes?.FirstOrDefault();
+            var value = change?.Value;
+            var message = value?.Messages?.FirstOrDefault();
+
+            if (message != null && message.Type == "text" && message.Text != null)
+            {
+                 // Confirmar que el mensaje es para esta compañia (Opcional por seguridad)
+                 // var phoneNumberId = value.Metadata.PhoneNumberId;
+                 
+                 await _conversationService.HandleIncomingMessageAsync(companyId, message.From, message.Text.Body);
+            }
             
             return Ok();
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            // Log error
+            return Ok(); // Siempre retornar Ok a Meta para evitar retries infinitos
         }
     }
 
@@ -45,17 +54,27 @@ public class WhatsAppWebhooksController : ControllerBase
     /// Verificación de webhook (Requerido por Meta/Facebook)
     /// </summary>
     [HttpGet("{companyId}")]
-    public IActionResult VerifyWebhook([FromQuery(Name = "hub.mode")] string mode,
+    public async Task<IActionResult> VerifyWebhook(string companyId,
+                                     [FromQuery(Name = "hub.mode")] string mode,
                                      [FromQuery(Name = "hub.verify_token")] string token,
                                      [FromQuery(Name = "hub.challenge")] string challenge)
     {
-        // En el MVP usaremos un verify token simple o configurable per company
-        return Ok(challenge);
-    }
-}
+        if (string.IsNullOrEmpty(mode) || string.IsNullOrEmpty(token))
+        {
+            return BadRequest("Missing params");
+        }
 
-public class WhatsAppMessagePayload
-{
-    public string From { get; set; } = string.Empty;
-    public string Text { get; set; } = string.Empty;
+        var company = await _companyRepository.GetByIdAsync(companyId);
+        if (company == null || company.WhatsAppSettings == null)
+        {
+            return NotFound("Company or WhatsApp settings not found");
+        }
+
+        if (mode == "subscribe" && token == company.WhatsAppSettings.VerifyToken)
+        {
+            return Ok(int.Parse(challenge)); // Meta espera el entero challenge (o string)
+        }
+        
+        return StatusCode(403);
+    }
 }

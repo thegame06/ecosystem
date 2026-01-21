@@ -77,7 +77,8 @@ builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IPlanService, PlanService>();
-builder.Services.AddScoped<IWhatsAppProvider, WhatsAppProviderMock>();
+builder.Services.AddHttpClient<IWhatsAppProvider, WhatsAppProvider>();
+// builder.Services.AddScoped<IWhatsAppProvider, WhatsAppProviderMock>();
 
 // Configurar autenticación JWT
 builder.Services.AddAuthentication(options =>

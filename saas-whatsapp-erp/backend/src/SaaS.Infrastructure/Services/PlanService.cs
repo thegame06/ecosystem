@@ -27,8 +27,8 @@ public class PlanService : IPlanService
 
         return resourceType.ToLower() switch
         {
-            "messages" => (counters?.MessagesUsed ?? 0) < limits.MaxMessages,
-            "conversations" => (counters?.ConversationsUsed ?? 0) < limits.MaxConversations,
+            "messages" => limits.WhatsAppIntegrated && (counters?.MessagesUsed ?? 0) < limits.MaxMessages,
+            "conversations" => limits.WhatsAppIntegrated && (counters?.ConversationsUsed ?? 0) < limits.MaxConversations,
             "invoices" => (counters?.InvoicesUsed ?? 0) < limits.MaxInvoices,
             "users" => (counters?.UsersUsed ?? 0) < limits.MaxUsers,
             _ => true

@@ -204,11 +204,11 @@ public class InvoiceService : IInvoiceService
         var pdfBytes = await GeneratePdfAsync(id, companyId);
         
         // 1. Enviar mensaje de texto inicial
-        await _whatsappProvider.SendTextMessageAsync(waNumber.PhoneNumber, customer.Phone, 
+        await _whatsappProvider.SendTextMessageAsync(companyId, customer.Phone, 
             $"Hola {customer.Name}, aquí tienes tu factura {invoice.Number} por un total de {invoice.Total:C}.");
 
         // 2. Enviar el PDF
-        var success = await _whatsappProvider.SendPdfAsync(waNumber.PhoneNumber, customer.Phone, pdfBytes ?? Array.Empty<byte>(), $"factura-{invoice.Number}.pdf");
+        var success = await _whatsappProvider.SendPdfAsync(companyId, customer.Phone, pdfBytes ?? Array.Empty<byte>(), $"factura-{invoice.Number}.pdf");
 
         if (success)
         {
