@@ -5,6 +5,10 @@
 ### 1. Base Técnica
 - React + TypeScript + Vite
 - ESLint y estructura modular
+- **Correcciones de Bugs (21/01/2026)**:
+  - Solucionados errores de importación en `ConversationsPage` y `ProductsPage` (Enums: CommercialState, ProductType).
+  - Corregido error "map is not a function" en el listado de productos mediante validación de array.
+  - Ajuste de respuesta paginada OData en `loadProducts`.
 
 ### 2. Productos
 - Listado y búsqueda

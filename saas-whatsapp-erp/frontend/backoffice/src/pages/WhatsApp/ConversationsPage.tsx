@@ -12,7 +12,6 @@ const ConversationsPage: React.FC = () => {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
     // Modal States
     const [isPOSOpen, setIsPOSOpen] = useState(false);
@@ -21,19 +20,19 @@ const ConversationsPage: React.FC = () => {
 
     useEffect(() => {
         fetchConversations();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchConversations = async () => {
         try {
             setIsLoading(true);
             const response = await conversationService.getAll();
-            setConversations(response.data);
-            if (response.data.length > 0 && !selectedId) {
+            setConversations(response.data.result);
+            if (response.data.result.length > 0 && !selectedId) {
                 // Auto select first one for demo
-                setSelectedId(response.data[0].id);
+                setSelectedId(response.data.result[0].id);
             }
         } catch (err) {
-            setError('Error al cargar conversaciones');
             console.error(err);
         } finally {
             setIsLoading(false);
@@ -109,9 +108,9 @@ const ConversationsPage: React.FC = () => {
                                         : 'hover:bg-white/60 hover:translate-x-1'
                                     }`}
                             >
-                                {conv.hasUnreadMessages && (
+                                {/* {conv.hasUnreadMessages && (
                                     <div className="absolute top-4 right-4 w-2.5 h-2.5 bg-primary-500 rounded-full ring-4 ring-primary-100"></div>
-                                )}
+                                )} */}
                                 <div className="flex gap-3">
                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-bold">
                                         {selectedCustomer?.name[0] || '?'}
@@ -126,7 +125,7 @@ const ConversationsPage: React.FC = () => {
                                                 {new Date(conv.lastActivityAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
-                                        <p className={`text-xs truncate ${conv.hasUnreadMessages ? 'text-slate-900 font-semibold' : 'text-slate-500'}`}>
+                                        <p className="text-xs truncate text-slate-500">
                                             {conv.lastMessage || 'Empieza a chatear...'}
                                         </p>
                                         <div className="mt-2 flex items-center justify-between">

@@ -10,9 +10,9 @@ public class UsageCountersRepository : IUsageCountersRepository
 {
     private readonly IMongoCollection<UsageCounters> _collection;
 
-    public UsageCountersRepository(IMongoClient mongoClient, IOptions<MongoDbSettings> settings)
+    public UsageCountersRepository(IMongoClient mongoClient, MongoDbSettings settings)
     {
-        var database = mongoClient.GetDatabase(settings.Value.DatabaseName);
+        var database = mongoClient.GetDatabase(settings.DatabaseName);
         _collection = database.GetCollection<UsageCounters>("usage_counters");
         
         // Ensure index

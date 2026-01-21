@@ -10,9 +10,9 @@ public class WhatsAppNumberRepository : IWhatsAppNumberRepository
 {
     private readonly IMongoCollection<WhatsAppNumber> _collection;
 
-    public WhatsAppNumberRepository(IMongoClient mongoClient, IOptions<MongoDbSettings> settings)
+    public WhatsAppNumberRepository(IMongoClient mongoClient, MongoDbSettings settings)
     {
-        var database = mongoClient.GetDatabase(settings.Value.DatabaseName);
+        var database = mongoClient.GetDatabase(settings.DatabaseName);
         _collection = database.GetCollection<WhatsAppNumber>("whatsapp_numbers");
     }
 

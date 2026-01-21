@@ -77,10 +77,16 @@ Todos con índices MongoDB optimizados y multi-tenancy:
 
 ### Compilación
 ```
-✅ Build succeeded
-✅ 0 errores
-✅ 0 warnings
+✅ Build succeeded (21/01/2026)
+✅ Dependency Injection reparado (IMongoClient)
+✅ UpdateAsync implementado en ConversationService
 ```
+
+### 10. **Mantenimiento y Correcciones (21/01/2026)**
+- ✅ **Inyección de Dependencias**: Corregida falta de registro de `IMongoClient` en `Program.cs`.
+- ✅ **OData**: Integrado `Microsoft.AspNetCore.OData` para paginación y filtrado.
+- ✅ **Conversations**: Implementado método `UpdateAsync` faltante en `IConversationService` y Controller.
+- ✅ **Invoices**: Ajustado retorno `void` en `SendWhatsAppAsync`.
 
 ---
 
