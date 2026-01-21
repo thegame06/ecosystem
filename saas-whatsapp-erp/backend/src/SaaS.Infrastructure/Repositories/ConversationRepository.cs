@@ -66,6 +66,12 @@ public class ConversationRepository : IConversationRepository
             .FirstOrDefaultAsync();
     }
 
+    public IQueryable<Conversation> GetQueryable(string companyId)
+    {
+        return _conversations.AsQueryable()
+            .Where(c => c.CompanyId == companyId);
+    }
+
     public async Task<Conversation> UpdateAsync(Conversation conversation)
     {
         conversation.UpdatedAt = DateTime.UtcNow;

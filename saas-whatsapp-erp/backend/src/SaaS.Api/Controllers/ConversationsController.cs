@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
+using SaaS.Application.Attributes;
 using SaaS.Application.DTOs.Conversations;
 using SaaS.Application.DTOs.Customers;
+using SaaS.Application.DTOs.Common;
 using SaaS.Application.Interfaces;
 
 namespace SaaS.Api.Controllers;
@@ -23,11 +26,29 @@ public class ConversationsController : ControllerBase
         return User.FindFirst("companyId")?.Value ?? throw new UnauthorizedAccessException("Company ID not found in token");
     }
 
-    [HttpGet]
-    public async Task<ActionResult<List<ConversationResponse>>> GetAll()
+    /// <summary>
+    /// Búsqueda de conversaciones con soporte OData
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(ResponsePagination<ConversationResponse>), 200)]
+    [EnableQuery(MaxTop = 100, AllowedQueryOptions = 
+        AllowedQueryOptions.Filter | 
+        AllowedQueryOptions.OrderBy | 
+        AllowedQueryOptions.Skip | 
+        AllowedQueryOptions.Top | 
+        AllowedQueryOptions.Count)]
+    public async Task<IActionResult> Search(ODataQueryOptions<ConversationResponse> queryOptions)
     {
-        var conversations = await _conversationService.GetAllAsync(GetCompanyId());
-        return Ok(conversations);
+        try
+        {
+            var companyId = GetCompanyId();
+            var result = await _conversationService.SearchAsync(queryOptions, companyId);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred", error = ex.Message });
+        }
     }
 
     [HttpGet("{id}")]
@@ -39,6 +60,7 @@ public class ConversationsController : ControllerBase
     }
     
     [HttpPost]
+    [LimitConsumption("conversations")]
     public async Task<ActionResult<ConversationResponse>> Create([FromBody] CreateConversationRequest request)
     {
         var conversation = await _conversationService.CreateAsync(request, GetCompanyId());

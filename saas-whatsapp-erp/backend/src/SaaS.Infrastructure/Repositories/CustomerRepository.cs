@@ -64,6 +64,12 @@ public class CustomerRepository : ICustomerRepository
             .FirstOrDefaultAsync();
     }
 
+    public IQueryable<Customer> GetQueryable(string companyId)
+    {
+        return _customers.AsQueryable()
+            .Where(c => c.CompanyId == companyId && c.IsActive);
+    }
+
     public async Task<Customer> UpdateAsync(Customer customer)
     {
         customer.UpdatedAt = DateTime.UtcNow;

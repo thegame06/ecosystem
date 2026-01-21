@@ -74,6 +74,12 @@ public class InvoiceRepository : IInvoiceRepository
             .FirstOrDefaultAsync();
     }
 
+    public IQueryable<Invoice> GetQueryable(string companyId)
+    {
+        return _invoices.AsQueryable()
+            .Where(i => i.CompanyId == companyId);
+    }
+
     public async Task<Invoice> UpdateAsync(Invoice invoice)
     {
         invoice.UpdatedAt = DateTime.UtcNow;

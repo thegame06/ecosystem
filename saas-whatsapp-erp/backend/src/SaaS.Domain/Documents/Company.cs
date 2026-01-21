@@ -1,5 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using SaaS.Domain.Enums;
 
 namespace SaaS.Domain.Documents;
 
@@ -18,8 +19,17 @@ public class Company
     [BsonElement("taxRate")]
     public decimal TaxRate { get; set; } = 0.15m; // 15% IVA por defecto
 
+    [BsonElement("isTaxEnabled")]
+    public bool IsTaxEnabled { get; set; } = true;
+
     [BsonElement("invoiceSequence")]
     public int InvoiceSequence { get; set; } = 1;
+
+    [BsonElement("plan")]
+    public PlanType Plan { get; set; } = PlanType.Starter;
+
+    [BsonElement("billingCycleStart")]
+    public DateTime BillingCycleStart { get; set; } = DateTime.UtcNow;
 
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -1,15 +1,12 @@
+import { CommercialState } from './conversation';
+
 export interface SaleItem {
     productId: string;
     productName: string;
     quantity: number;
     unitPrice: number;
-    discount: number; // Percentage 0-1 or Amount? Let's use Amount for simplicity or Percentage? 
-                     // MVP says "Discounts must be visible". Let's assume % for now or value?
-                     // Usually % is easier 0.10. 
-                     // But let's check Product definition logic again. "Descuento (%)" is in Product.
-    taxRate: number; // 0 to 1 (e.g., 0.21)
+    taxRate: number; // e.g. 0.15
     subtotal: number;
-    taxAmount: number;
     total: number;
 }
 
@@ -17,24 +14,20 @@ export interface Sale {
     id: string;
     companyId: string;
     customerId: string;
-    number: string;
-    customerName?: string; // Helper for UI
-    date: string; // ISO Date
     items: SaleItem[];
     subtotal: number;
     taxAmount: number;
     total: number;
-    status: string;
-    paymentMethod?: 'cash' | 'transfer' | 'card';
+    state: CommercialState;
+    createdAt: string;
 }
 
-export interface CreateSaleDto {
+export interface CreateSaleRequest {
     customerId: string;
     items: {
         productId: string;
         quantity: number;
-        unitPrice: number; // Snapshot price
-        discount?: number; // Discount %
+        unitPrice: number;
+        taxRate: number;
     }[];
-    paymentMethod: 'cash' | 'transfer' | 'card';
 }

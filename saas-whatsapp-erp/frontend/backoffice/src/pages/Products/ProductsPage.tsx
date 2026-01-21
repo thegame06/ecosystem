@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { Product, ProductType, CreateProductRequest, UpdateProductRequest, PRODUCT_TYPE_LABELS } from '../../types/product';
+import { Product, CreateProductRequest, UpdateProductRequest } from '../../types/product';
+import { ProductType, PRODUCT_TYPE_LABELS } from '../../types/enums';
 import { productService } from '../../services/productService';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
@@ -36,8 +37,8 @@ const ProductsPage: React.FC = () => {
     const loadProducts = async () => {
         setIsLoading(true);
         try {
-            const data = await productService.getAll();
-            setProducts(data);
+            const response = await productService.getAll();
+            setProducts(response.data.result || []);
         } catch (error) {
             console.error('Error loading products:', error);
         } finally {
@@ -115,8 +116,8 @@ const ProductsPage: React.FC = () => {
         }
     };
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredProducts = (products || []).filter(p =>
+        p && p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (

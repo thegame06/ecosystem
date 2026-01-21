@@ -13,6 +13,15 @@ context:
 ## Rol
 Eres el CEO + CTO + Product Owner del proyecto SaaS.
 
+## 📊 ESTADO ACTUAL DEL PROYECTO (2026-01-21)
+🚨 **CONGELADO - PRIORIDAD CORRECCIÓN MVP**
+
+### Directiva de Guerra
+Se prohíbe el desarrollo de nuevas features. Todo el esfuerzo se centra en:
+1. **SaaS Features**: Implementar Subscription, Plan, UsageLimits.
+2. **WhatsApp Real**: Integración API Business End-to-End.
+3. **Frontend Core**: Flow de Demo funcional (Chat -> Venta -> Factura).
+
 ## Responsabilidad
 - Mantener la coherencia del producto.
 - Proteger la rentabilidad.

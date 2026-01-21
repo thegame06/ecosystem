@@ -1,14 +1,14 @@
 import api from './api';
-import { Sale, CreateSaleDto } from '../types/sale';
+import { Sale, CreateSaleRequest } from '../types/sale';
+import { PagedResponse } from '../types/pagination';
 
 export const saleService = {
-    getAll: async (): Promise<Sale[]> => {
-        const response = await api.get<Sale[]>('/sales');
-        return response.data;
-    },
+    getAll: (page: number = 1, pageSize: number = 20) =>
+        api.get<PagedResponse<Sale>>(`/sales?page=${page}&pageSize=${pageSize}`),
 
-    create: async (saleData: CreateSaleDto): Promise<Sale> => {
-        const response = await api.post<Sale>('/sales', saleData);
-        return response.data;
-    }
+    getById: (id: string) => api.get<Sale>(`/sales/${id}`),
+
+    create: (data: CreateSaleRequest) => api.post<Sale>('/sales', data),
+
+    getInvoice: (id: string) => api.get(`/sales/${id}/invoice`),
 };

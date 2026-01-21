@@ -15,7 +15,6 @@ public class SaleRepository : ISaleRepository
         var database = client.GetDatabase(settings.DatabaseName);
         _sales = database.GetCollection<Sale>("sales");
 
-        // Crear índices
         CreateIndexes();
     }
 
@@ -57,6 +56,15 @@ public class SaleRepository : ISaleRepository
             .Find(s => s.CompanyId == companyId)
             .SortByDescending(s => s.CreatedAt)
             .ToListAsync();
+    }
+
+    /// <summary>
+    /// Obtiene IQueryable para aplicar filtros OData directamente en MongoDB
+    /// </summary>
+    public IQueryable<Sale> GetQueryable(string companyId)
+    {
+        return _sales.AsQueryable()
+            .Where(s => s.CompanyId == companyId);
     }
 
     public async Task<List<Sale>> GetByCustomerIdAsync(string companyId, string customerId)

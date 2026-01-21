@@ -1,5 +1,6 @@
 import api from './api';
 import { Customer, CreateCustomerRequest, UpdateCustomerRequest } from '../types/customer';
+import { PagedResponse } from '../types/pagination';
 
 // Adapt API response to UI Model
 const adaptCustomer = (c: Customer): Customer => ({
@@ -12,8 +13,8 @@ const adaptCustomer = (c: Customer): Customer => ({
 
 export const customerService = {
   getAll: async (): Promise<Customer[]> => {
-      const response = await api.get<Customer[]>('/customers');
-      return response.data.map(adaptCustomer);
+      const response = await api.get<PagedResponse<Customer>>('/customers');
+      return (response.data.result || []).map(adaptCustomer);
   },
   getById: async (id: string): Promise<Customer | undefined> => {
       const response = await api.get<Customer>(`/customers/${id}`);

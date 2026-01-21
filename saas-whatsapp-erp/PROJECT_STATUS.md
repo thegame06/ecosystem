@@ -1,61 +1,50 @@
 # 📊 ESTADO DEL PROYECTO SaaS WhatsApp ERP
 
-**Fecha de Actualización**: 2026-01-20
-**Fuente de Verdad**: `docs/context/*.md` (Sincronizado desde .github)
+**Fecha de Actualización**: 2026-01-21
+**ESTADO**: 🚨 **CONGELADO - PRIORIDAD CORRECCIÓN MVP**
 
-## 📂 Documentación Oficial
-La documentación del proyecto ha sido actualizada y centralizada en `docs/`.
-- [Definición del Producto](docs/context/product-definition.md)
-- [Arquitectura MVP](docs/context/mvp-architecture.md)
-- [Modelo de Dominio](docs/context/domain-model.md)
-- [Casos de Uso](docs/context/use-cases.md)
-- [Reglas de Precios](docs/context/pricing_calculation_rules.md)
-- [Flujo de Ventas](docs/context/sales-flow.md)
+## 🛑 DIRECTIVA DEL ORQUESTADOR (2026-01-21)
+Se prohíbe el desarrollo de nuevas features. El equipo entra en fase de corrección crítica enfocada en:
+1. **SaaS / Subscriptions**: Monetización y límites.
+2. **WhatsApp end-to-end**: Comunicación real.
+3. **Frontend Core**: Demo funcional en < 3 minutos.
 
 ---
 
 ## 🏗 Estado Actual de Desarrollo
 
 ### 🟢 Backend (SaaS.Api)
-**Tecnología**: .NET 9.0, MongoDB, Clean Architecture
-**Estado**: ~70% Core Funcional
+**Tecnología**: .NET 10.0, MongoDB, Clean Architecture
+**Estado**: ~85% Core Funcional | 0% SaaS Features
 
 #### ✅ Completado
-- Infraestructura: Multi-tenant, Auth (JWT), MongoDB Repositories.
-- Documentos Core: Company, User, Customer, Product, Sale, Invoice, Conversation.
-- Controllers implementados: Auth, Products.
+- Infraestructura: Multi-tenant, Auth (JWT), Repositorios optimizados.
+- Controllers Core (6/6): Auth, Products, Customers, Sales, Invoices, Conversations.
+- Servicios de Negocio: Auth, Customer, Sale, Invoice, Conversation.
 
-#### ⚠️ Pendiente / En Progreso
-- Controllers: Customers, Sales, Invoices, Conversations.
-- Servicios de Negocio: SaleService, InvoiceService.
-- SaaS Features: Planes, Límites, Tracking de consumo.
+#### ❌ Pendiente CRÍTICO (Prioridad 1)
+- **SaaS Features**: Planes (Starter, Pro, Growth), Límites, Tracking de consumo, Suscripciones.
+- **WhatsApp Integration**: Webhooks, Integración API Business, Envío real.
 
 ### 🟡 Frontend (Backoffice)
 **Tecnología**: React, TypeScript, Vite, Tailwind
-**Estado**: ~15% Estructura Inicial (Previo: Reportado como 0% y 50% conflictivo)
+**Estado**: ~20% Estructura Inicial
 
 #### ✅ Existente
-- Proyecto inicializado (`frontend/backoffice`).
-- Estructura de carpetas (`src/components`, `src/pages`, etc.).
-- Configuración base (Vite, Tailwind, ESLint).
-- Componentes básicos y autenticación (esqueleto).
+- Setup inicial y estructura de carpetas.
+- Módulo de Productos básico (Listado/Creación).
 
-#### ⚠️ Pendiente
-- Integración real con API Backend.
-- Vistas completas de Ventas, Facturación, WhatsApp.
-- Gestión de estado global y manejo de errores robusto.
-
-### 🔴 Mobile
-**Estado**: 0%
-- Solo carpeta contenedora. Requiere inicialización.
+#### ❌ Pendiente CRÍTICO (Prioridad 3)
+- **Login/Register**: Conexión real con backend.
+- **Flujo Demo**: WhatsApp -> Venta -> Factura -> Enviar (End-to-end).
+- **UI/UX**: Cumplimiento de principios "WhatsApp-First".
 
 ---
 
-## 📋 Próximos Pasos (Roadmap Inmediato)
+## 📋 Plan de Acción Inmediato (War Room)
 
-1. **Validación de Agentes**: Revisa `docs/agents/` para entender roles.
-2. **Backend**: Completar `CustomersController` y `SalesController`.
-3. **Frontend**: Conectar `AuthController` con Login UI.
-4. **Ops**: Validar conexión MongoDB Atlas (o local).
+1. **BACKEND**: Implementar `Subscription`, `PlanType`, `UsageCounters` y Middleware de límites.
+2. **OPERATIONS/BACKEND**: Integrar WhatsApp Business API y Webhooks.
+3. **FRONTEND**: Implementar Auth y el flujo "Chat -> Venta -> Factura".
 
-Ver `FASE1_VALIDACION.md` (Histórico) para detalle de deuda técnica anterior.
+Ver `FASE1_CORRECCION.md` para el seguimiento detallado de estas tareas.

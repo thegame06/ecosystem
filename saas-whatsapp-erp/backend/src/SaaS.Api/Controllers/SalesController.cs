@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using SaaS.Application.DTOs.Invoices;
 using SaaS.Application.DTOs.Sales;
+using SaaS.Application.DTOs.Common;
 using SaaS.Application.Interfaces;
 
 namespace SaaS.Api.Controllers;
@@ -23,11 +25,29 @@ public class SalesController : ControllerBase
         return User.FindFirst("companyId")?.Value ?? throw new UnauthorizedAccessException("Company ID not found in token");
     }
 
-    [HttpGet]
-    public async Task<ActionResult<List<SaleResponse>>> GetAll()
+    /// <summary>
+    /// Búsqueda de ventas con soporte OData
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(ResponsePagination<SaleResponse>), 200)]
+    [EnableQuery(MaxTop = 100, AllowedQueryOptions = 
+        AllowedQueryOptions.Filter | 
+        AllowedQueryOptions.OrderBy | 
+        AllowedQueryOptions.Skip | 
+        AllowedQueryOptions.Top | 
+        AllowedQueryOptions.Count)]
+    public async Task<IActionResult> Search(ODataQueryOptions<SaleResponse> queryOptions)
     {
-        var sales = await _saleService.GetAllAsync(GetCompanyId());
-        return Ok(sales);
+        try
+        {
+            var companyId = GetCompanyId();
+            var result = await _saleService.SearchAsync(queryOptions, companyId);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred", error = ex.Message });
+        }
     }
 
     [HttpGet("{id}")]

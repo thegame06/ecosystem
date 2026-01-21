@@ -16,13 +16,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor to handle 401 errors
+// Interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('[API Error]:', error.response?.data || error.message);
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      // Redirect to login if not already there
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }

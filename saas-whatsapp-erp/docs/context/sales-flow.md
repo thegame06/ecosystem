@@ -103,18 +103,45 @@ If a step is not described here, it does not exist in the MVP.
 - User sends Invoice through WhatsApp
 
 ### Actions
-- Generate Invoice PDF (on demand)
-- Send PDF via WhatsApp
-- Update:
-  - `Invoice.Status = Sent`
-  - `Invoice.SentAt = now`
-- Increment usage counters:
-  - Messages
-  - Invoices
+1. **Validate prerequisites**:
+   - WhatsApp number is configured and active
+   - Customer has `WhatsAppConsent = true`
+   - `UsageCounters.MessagesUsed < Plan.MessageLimit`
+   - `UsageCounters.InvoicesUsed < Plan.InvoiceLimit`
+
+2. **If validation passes**:
+   - Generate Invoice PDF (on demand)
+   - Send PDF via WhatsApp API (unofficial)
+   - Update:
+     - `Invoice.Status = Sent`
+     - `Invoice.SentAt = now`
+   - Increment usage counters:
+     - `UsageCounters.MessagesUsed += 1`
+     - `UsageCounters.InvoicesUsed += 1`
+
+3. **If validation fails**:
+   - Block action
+   - Show error message
+   - Suggest upgrade (if limit exceeded)
 
 ### Validations
 - WhatsApp message limit not exceeded
+- WhatsApp invoice limit not exceeded
 - WhatsApp number is active
+- Customer has given explicit consent
+
+### Integration Model
+- **Uses unofficial WhatsApp API**
+- **BYON (Bring Your Own Number)** model
+- Customer owns the WhatsApp number
+- Customer assumes ban risk
+
+### Risk Warning
+⚠️ **WhatsApp may ban numbers using unofficial APIs**
+- Ban can be temporary (24-48h) or permanent
+- Customer is responsible for compliance
+- Conversation history is preserved if banned
+- See `whatsapp-integration.md` for full risk disclosure
 
 ---
 
@@ -167,11 +194,39 @@ Invalid transitions must be rejected.
 
 ## 9️⃣ Forbidden Flows (MVP)
 
+**General:**
 - Creating Invoice without Sale
 - Recalculating totals in Invoice
 - Sending WhatsApp without limit validation
 - Marking as Paid without Invoice
 - Skipping states
+
+**WhatsApp (Strictly Forbidden):**
+- ❌ **Mass messaging**
+  - Sending the same invoice to multiple customers
+  - Broadcasting messages
+  - Campaign-style messaging
+
+- ❌ **Automated messaging**
+  - Auto-sending invoices on creation
+  - Scheduled message delivery
+  - Trigger-based messaging (e.g., auto-reminder)
+
+- ❌ **Bypassing limits**
+  - Sending messages when limit is exceeded
+  - Resetting counters manually
+  - Using multiple WhatsApp numbers to bypass limits
+
+- ❌ **Sending without consent**
+  - Messaging customers without `WhatsAppConsent = true`
+  - Assuming consent by default
+  - Ignoring consent status
+
+**Rationale:**
+- These flows increase ban risk
+- These flows violate Meta's Terms of Service
+- These flows are not part of the MVP scope
+- See `whatsapp-integration.md` for full details
 
 ---
 

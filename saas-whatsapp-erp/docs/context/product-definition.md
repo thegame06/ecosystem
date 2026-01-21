@@ -178,15 +178,34 @@ Diferenciador clave:
 ---
 
 ### WhatsApp & Communication (CORE)
-- Conversaciones
-- Mensajes
-- Plantillas simples
-- Envío de facturas por WhatsApp
 
-**MVP:**
-- Integración simple
-- BYON (Bring Your Own Number)
-- Control de mensajes por límites
+**⚠️ IMPORTANT**: See [whatsapp-integration.md](whatsapp-integration.md) for complete details.
+
+**MVP Scope:**
+- Manual 1-to-1 messaging only
+- Invoice delivery via WhatsApp
+- Conversation tracking
+- BYON (Bring Your Own Number) model
+- **Unofficial WhatsApp API** (NOT WhatsApp Business Cloud API)
+
+**Features:**
+- View conversations
+- Send invoices to individual customers
+- Track commercial state per conversation
+- Usage limit enforcement (hard limits)
+
+**Explicitly NOT Included in MVP:**
+- ❌ Bots or automated responses
+- ❌ Mass messaging / campaigns
+- ❌ Automated workflows
+- ❌ WhatsApp Business Cloud API
+- ❌ Message templates (official)
+- ❌ Interactive buttons
+
+**Risk Warning:**
+- WhatsApp may ban numbers using unofficial APIs
+- Customer owns the number and assumes ban risk
+- See [whatsapp-integration.md](whatsapp-integration.md) for full risk disclosure
 
 ---
 
@@ -246,6 +265,17 @@ Diferenciador clave:
 - App móvil nativa
 - Inventario avanzado
 - Calendarios de renta
+
+**WhatsApp (explícitamente excluido del MVP):**
+- ❌ WhatsApp Business Cloud API (oficial)
+- ❌ Bots o respuestas automáticas
+- ❌ Envíos masivos / campañas
+- ❌ Workflows automáticos
+- ❌ Plantillas de mensajes (oficiales)
+- ❌ Botones interactivos
+- ❌ Integración de catálogo
+- ❌ Integración de pagos
+- ❌ Automatización basada en IA
 
 ---
 

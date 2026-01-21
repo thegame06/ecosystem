@@ -8,6 +8,7 @@ La documentación maestra del proyecto se encuentra en la carpeta `docs/`:
 
 - **[Contexto del Producto](docs/context/product-definition.md)**: Visión, alcance y módulos.
 - **[Arquitectura](docs/context/mvp-architecture.md)**: Stack tecnológico (.NET + React + MongoDB).
+- **[Integración WhatsApp](docs/context/whatsapp-integration.md)**: ⚠️ **Alcance, límites y riesgos de WhatsApp**.
 - **[Agentes](docs/agents/)**: Definición de roles y responsabilidades de los agentes AI.
 
 ## 🚀 Estructura del Proyecto

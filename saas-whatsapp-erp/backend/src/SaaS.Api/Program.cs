@@ -1,10 +1,13 @@
 using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.OData;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using MongoDB.Driver;
+using SaaS.Api.Filters;
 using SaaS.Application.Interfaces;
 using SaaS.Application.Validators;
 using SaaS.Infrastructure.Configuration;
@@ -31,6 +34,11 @@ var jwtSettings = new JwtSettings
 
 // Registrar servicios
 builder.Services.AddSingleton(mongoSettings);
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var settings = sp.GetRequiredService<MongoDbSettings>();
+    return new MongoClient(settings.ConnectionString);
+});
 builder.Services.AddSingleton(jwtSettings);
 
 // Repositorios
@@ -41,8 +49,21 @@ builder.Services.AddSingleton<IProductRepository, ProductRepository>();
 builder.Services.AddSingleton<ISaleRepository, SaleRepository>();
 builder.Services.AddSingleton<IInvoiceRepository, InvoiceRepository>();
 builder.Services.AddSingleton<IConversationRepository, ConversationRepository>();
+builder.Services.AddSingleton<IUsageCountersRepository, UsageCountersRepository>();
+builder.Services.AddSingleton<IWhatsAppNumberRepository, WhatsAppNumberRepository>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<PlanLimitFilter>();
+})
+.AddOData(options => options
+    .Select()
+    .Filter()
+    .OrderBy()
+    .SetMaxTop(100)
+    .Count()
+);
+
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateCustomerRequestValidator>();
@@ -51,9 +72,12 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateCustomerRequestValida
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
+builder.Services.AddScoped<IPlanService, PlanService>();
+builder.Services.AddScoped<IWhatsAppProvider, WhatsAppProviderMock>();
 
 // Configurar autenticación JWT
 builder.Services.AddAuthentication(options =>
@@ -88,7 +112,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddControllers();
+// builder.Services.AddControllers(); // Removed duplicate
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

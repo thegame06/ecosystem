@@ -1,19 +1,13 @@
-export enum CommercialState {
-    LEAD = 'LEAD',
-    SALE_CREATED = 'SALE_CREATED',
-    INVOICED = 'INVOICED',
-    PAID = 'PAID'
-}
+import { CommercialState } from './enums';
 
 export interface Conversation {
     id: string;
     companyId: string;
     customerId: string;
-    customerName: string; // Enriched from customer
     customerPhone: string;
     channel: string;
-    lastMessage: string;
+    lastMessage: string | null;
     lastState: CommercialState;
-    hasUnreadMessages: boolean;
-    updatedAt: string;
+    lastActivityAt: string;
+    isActive: boolean;
 }

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.OData.Query;
+using SaaS.Application.DTOs.Common;
 using SaaS.Application.DTOs.Customers;
 using SaaS.Application.DTOs.Sales;
 using SaaS.Application.Interfaces;
@@ -22,6 +24,51 @@ public class CustomerService : ICustomerService
         _saleRepository = saleRepository;
         _invoiceRepository = invoiceRepository;
         _conversationRepository = conversationRepository;
+    }
+
+    public async Task<ResponsePagination<CustomerResponse>> SearchAsync(
+        ODataQueryOptions<CustomerResponse> queryOptions, 
+        string companyId)
+    {
+        // 1. Obtener IQueryable filtrado por companyId (NO carga datos)
+        var customersQuery = _customerRepository.GetQueryable(companyId);
+        
+        // 2. Mapear a DTOs inline (aún NO ejecuta query)
+        var customerResponses = customersQuery.Select(customer => new CustomerResponse
+        {
+            Id = customer.Id,
+            CompanyId = customer.CompanyId,
+            Name = customer.Name,
+            Phone = customer.Phone,
+            Email = customer.Email,
+            TaxId = customer.TaxId,
+            Address = customer.Address,
+            CurrentState = customer.CurrentState
+        });
+
+        // 3. Aplicar OData (TODAVÍA en MongoDB)
+        var filteredQuery = queryOptions.ApplyTo(customerResponses) as IQueryable<CustomerResponse>;
+        
+        // 4. Contar total (ejecuta COUNT en MongoDB)
+        var totalCount = filteredQuery?.LongCount() ?? 0;
+
+        // 5. Extraer skip y top
+        var skip = queryOptions.Skip?.Value ?? 0;
+        var top = queryOptions.Top?.Value ?? 20;
+
+        // 6. Aplicar paginación y ejecutar (solo trae registros necesarios)
+        var results = filteredQuery?
+            .Skip(skip)
+            .Take(top)
+            .ToList() ?? new List<CustomerResponse>();
+
+        return new ResponsePagination<CustomerResponse>
+        {
+            Result = results,
+            Page = skip,
+            RowsPerPage = top,
+            TotalRows = totalCount
+        };
     }
 
     public async Task<List<CustomerResponse>> GetAllAsync(string companyId)

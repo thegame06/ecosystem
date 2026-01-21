@@ -51,9 +51,10 @@ const SalesPage: React.FC = () => {
     const loadProducts = async () => {
         setIsLoadingProducts(true);
         try {
-            const data = await productService.getAll();
-            setProducts(data);
-            setFilteredProducts(data);
+            const response = await productService.getAll();
+            const items = response.data.result || [];
+            setProducts(items);
+            setFilteredProducts(items);
         } catch (error) {
             console.error("Failed to load products", error);
         } finally {

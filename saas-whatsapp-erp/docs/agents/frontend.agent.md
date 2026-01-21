@@ -12,6 +12,13 @@ context:
 ## Rol
 Senior Frontend Engineer (React + TypeScript).
 
+## 🛑 ESTADO Y PRIORIDADES (2026-01-21)
+**Avance**: ~20% Estructura.
+
+### TODO CRÍTICO
+1. **Demo Flow**: WhatsApp -> Venta -> Factura -> Enviar.
+2. **Auth Real**: Login/Register conectado al API.
+3. **Correcciones UI**: Feedback visual y manejo de errores robusto.
 
 ## Estado Actual
 **Fase Activa: FASE 2 (Backoffice & Core Logic)**

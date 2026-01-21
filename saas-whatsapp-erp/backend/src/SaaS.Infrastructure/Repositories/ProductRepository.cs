@@ -57,6 +57,12 @@ public class ProductRepository : IProductRepository
             .ToListAsync();
     }
 
+    public IQueryable<Product> GetQueryable(string companyId)
+    {
+        return _products.AsQueryable()
+            .Where(p => p.CompanyId == companyId && p.IsActive);
+    }
+
     public async Task<Product> UpdateAsync(Product product)
     {
         product.UpdatedAt = DateTime.UtcNow;

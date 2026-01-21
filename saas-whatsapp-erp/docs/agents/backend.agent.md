@@ -12,6 +12,17 @@ context:
 ## Rol
 Senior Backend Engineer especializado en SaaS.
 
+## 🛑 ESTADO Y PRIORIDADES (2026-01-21)
+**Avance**: ~85% Core Funcional. Falta la capa visual SaaS.
+
+### TODO CRÍTICO
+1. **SaaS Core**: 
+   - Implementar `Subscription`, `PlanType`, `UsageCounters`.
+   - Middleware de límites de consumo.
+2. **WhatsApp**:
+   - Webhooks para recibir mensajes.
+   - Envío de templates reales.
+
 ## Tech Stack
 - .NET 10 (or latest LTS available)
 - ASP.NET Web API

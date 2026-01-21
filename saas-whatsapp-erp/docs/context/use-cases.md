@@ -118,9 +118,35 @@ If a use case is not listed here, it does NOT exist in the MVP.
 **Actor:** User  
 **Description:** Send invoice PDF to customer via WhatsApp.
 
+**Prerequisites:**
+- WhatsApp number is active
+- Customer has WhatsApp consent
+- Message limit not exceeded
+
+**Steps:**
+1. User selects "Send via WhatsApp" on invoice
+2. System validates:
+   - WhatsApp number is configured and active
+   - Customer has `WhatsAppConsent = true`
+   - `UsageCounters.MessagesUsed < Plan.MessageLimit`
+3. System generates invoice PDF
+4. System sends PDF via WhatsApp API (unofficial)
+5. System updates:
+   - `Invoice.Status = Sent`
+   - `Invoice.SentAt = now`
+   - `UsageCounters.MessagesUsed += 1`
+   - `UsageCounters.InvoicesUsed += 1`
+
 **Rules:**
 - WhatsApp limit validation required
 - Invoice status must be Issued
+- Customer consent must be explicit
+- **Uses unofficial WhatsApp API** (BYON model)
+
+**Risks:**
+- WhatsApp may ban the number for using unofficial API
+- Customer owns the number and assumes ban risk
+- See `whatsapp-integration.md` for full risk disclosure
 
 ---
 
@@ -181,6 +207,7 @@ If a use case is not listed here, it does NOT exist in the MVP.
 
 ## 🔟 Forbidden Use Cases (MVP)
 
+**General:**
 - Online payments
 - Partial payments
 - Inventory management
@@ -188,6 +215,34 @@ If a use case is not listed here, it does NOT exist in the MVP.
 - Credit notes
 - Public web checkout
 - AI-based automation
+
+**WhatsApp (Strictly Forbidden):**
+- ❌ **UC-X1: Send Mass Messages**
+  - Broadcast to multiple customers
+  - Campaigns
+  - Bulk messaging
+
+- ❌ **UC-X2: Automated Responses**
+  - Chatbots
+  - Auto-replies
+  - AI-powered responses
+
+- ❌ **UC-X3: Automated Workflows**
+  - Trigger-based messaging
+  - Scheduled messages
+  - Event-driven automation
+
+- ❌ **UC-X4: WhatsApp Business Cloud API Features**
+  - Official message templates
+  - Interactive buttons
+  - Catalog integration
+  - Payment integration
+
+**Rationale:**
+- These features increase ban risk
+- These features increase infrastructure costs
+- These features are not part of the MVP scope
+- See `whatsapp-integration.md` for full details
 
 ---
 

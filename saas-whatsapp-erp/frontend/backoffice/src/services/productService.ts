@@ -1,37 +1,16 @@
 import api from './api';
-import { Product, CreateProductRequest, UpdateProductRequest, ProductType } from '../types/product';
-
-// UI Helper to adapt Backend Response to UI Model if needed
-const adaptProduct = (p: Product): Product => ({
-    ...p,
-    sku: p.id.substring(0, 8).toUpperCase(), // Fake SKU if missing
-    stock: p.stock ?? 0,
-    taxRate: p.taxRate ?? 0
-});
+import { Product } from '../types/product';
+import { PagedResponse } from '../types/pagination';
 
 export const productService = {
-  getAll: async (): Promise<Product[]> => {
-      const response = await api.get<Product[]>('/products');
-      return response.data.map(adaptProduct);
-  },
-  getById: async (id: string): Promise<Product | undefined> => {
-      const response = await api.get<Product>(`/products/${id}`);
-      return adaptProduct(response.data);
-  },
-    create: async (data: CreateProductRequest): Promise<Product> => {
-            try {
-                const response = await api.post<Product>('/products', data);
-                return adaptProduct(response.data);
-            } catch (error) {
-                // Mejor feedback: lanzar error para mostrar en UI
-                throw error;
-            }
-    },
-  update: async (id: string, data: UpdateProductRequest): Promise<Product> => {
-       const response = await api.put<Product>(`/products/${id}`, data);
-       return adaptProduct(response.data);
-  },
-  delete: async (id: string) => {
-      return api.delete(`/products/${id}`);
-  }
+    getAll: (page: number = 1, pageSize: number = 20) =>
+        api.get<PagedResponse<Product>>(`/products?page=${page}&pageSize=${pageSize}`),
+
+    getById: (id: string) => api.get<Product>(`/products/${id}`),
+
+    create: (data: any) => api.post<Product>('/products', data),
+
+    update: (id: string, data: any) => api.put<Product>(`/products/${id}`, data),
+
+    delete: (id: string) => api.delete(`/products/${id}`)
 };

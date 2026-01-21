@@ -7,6 +7,7 @@ public interface IConversationRepository
     Task<Conversation> CreateAsync(Conversation conversation);
     Task<Conversation?> GetByIdAsync(string id);
     Task<List<Conversation>> GetByCompanyIdAsync(string companyId);
+    IQueryable<Conversation> GetQueryable(string companyId);
     Task<Conversation?> GetByCustomerIdAsync(string companyId, string customerId);
     Task<Conversation> UpdateAsync(Conversation conversation);
 }

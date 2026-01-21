@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
+using SaaS.Application.Attributes;
 using SaaS.Application.DTOs.Invoices;
+using SaaS.Application.DTOs.Common;
 using SaaS.Application.Interfaces;
 
 namespace SaaS.Api.Controllers;
@@ -22,11 +25,29 @@ public class InvoicesController : ControllerBase
         return User.FindFirst("companyId")?.Value ?? throw new UnauthorizedAccessException("Company ID not found in token");
     }
 
-    [HttpGet]
-    public async Task<ActionResult<List<InvoiceResponse>>> GetAll()
+    /// <summary>
+    /// Búsqueda de facturas con soporte OData
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(ResponsePagination<InvoiceResponse>), 200)]
+    [EnableQuery(MaxTop = 100, AllowedQueryOptions = 
+        AllowedQueryOptions.Filter | 
+        AllowedQueryOptions.OrderBy | 
+        AllowedQueryOptions.Skip | 
+        AllowedQueryOptions.Top | 
+        AllowedQueryOptions.Count)]
+    public async Task<IActionResult> Search(ODataQueryOptions<InvoiceResponse> queryOptions)
     {
-        var invoices = await _invoiceService.GetAllAsync(GetCompanyId());
-        return Ok(invoices);
+        try
+        {
+            var companyId = GetCompanyId();
+            var result = await _invoiceService.SearchAsync(queryOptions, companyId);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred", error = ex.Message });
+        }
     }
 
     [HttpGet("{id}")]
@@ -38,6 +59,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPost]
+    [LimitConsumption("invoices")]
     public async Task<ActionResult<InvoiceResponse>> Create([FromBody] CreateInvoiceRequest request)
     {
         try
@@ -69,6 +91,7 @@ public class InvoicesController : ControllerBase
         try
         {
              var pdfBytes = await _invoiceService.GeneratePdfAsync(id, GetCompanyId());
+             if (pdfBytes == null) return NotFound();
              return File(pdfBytes, "application/pdf", $"invoice-{id}.pdf");
         }
         catch
@@ -78,10 +101,10 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPost("{id}/send-whatsapp")]
+    [LimitConsumption("messages")]
     public async Task<ActionResult> SendWhatsApp(string id)
     {
-         var success = await _invoiceService.SendWhatsAppAsync(id, GetCompanyId());
-         if (!success) return BadRequest("Could not send WhatsApp");
-         return Ok(new { message = "Sent successfully" });
+         await _invoiceService.SendWhatsAppAsync(id, GetCompanyId());
+         return Ok(new { message = "Se ha intentado enviar el mensaje" });
     }
 }

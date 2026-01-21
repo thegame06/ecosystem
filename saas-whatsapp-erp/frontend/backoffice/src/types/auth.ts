@@ -1,3 +1,5 @@
+import { PlanType } from './enums';
+
 export interface UserInfo {
     id: string;
     email: string;

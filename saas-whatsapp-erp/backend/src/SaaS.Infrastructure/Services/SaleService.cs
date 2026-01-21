@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.OData.Query;
+using SaaS.Application.DTOs.Common;
 using SaaS.Application.DTOs.Invoices;
 using SaaS.Application.DTOs.Sales;
 using SaaS.Application.Interfaces;
@@ -23,6 +25,62 @@ public class SaleService : ISaleService
         _productRepository = productRepository;
         _customerRepository = customerRepository;
         _invoiceRepository = invoiceRepository;
+    }
+
+    public async Task<ResponsePagination<SaleResponse>> SearchAsync(
+        ODataQueryOptions<SaleResponse> queryOptions, 
+        string companyId)
+    {
+        // 1. Obtener IQueryable filtrado por companyId (NO carga datos en memoria)
+        var salesQuery = _saleRepository.GetQueryable(companyId);
+        
+        // 2. Mapear a DTOs (aún en IQueryable, no ejecutado)
+        var saleResponses = salesQuery.Select(sale => new SaleResponse
+        {
+            Id = sale.Id,
+            CompanyId = sale.CompanyId,
+            CustomerId = sale.CustomerId,
+            Number = sale.Number,
+            Date = sale.Date,
+            Subtotal = sale.Subtotal,
+            TaxAmount = sale.TaxAmount,
+            Total = sale.Total,
+            Status = sale.State.ToString(),
+            Items = sale.Items.Select(i => new SaleItemResponse
+            {
+                ProductId = i.ProductId,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice,
+                TaxRate = i.TaxRate,
+                Subtotal = i.Subtotal,
+                Total = i.Total
+            }).ToList()
+        });
+
+        // 3. Aplicar OData (filtros, orden) - TODAVÍA en MongoDB
+        var filteredQuery = queryOptions.ApplyTo(saleResponses) as IQueryable<SaleResponse>;
+        
+        // 4. Contar total (ejecuta query COUNT en MongoDB)
+        var totalCount = filteredQuery?.LongCount() ?? 0;
+
+        // 5. Extraer skip y top
+        var skip = queryOptions.Skip?.Value ?? 0;
+        var top = queryOptions.Top?.Value ?? 20;
+
+        // 6. Aplicar paginación y AHORA SÍ ejecutar query (solo trae los registros necesarios)
+        var results = filteredQuery?
+            .Skip(skip)
+            .Take(top)
+            .ToList() ?? new List<SaleResponse>();
+
+        return new ResponsePagination<SaleResponse>
+        {
+            Result = results,
+            Page = skip,
+            RowsPerPage = top,
+            TotalRows = totalCount
+        };
     }
 
     public async Task<List<SaleResponse>> GetAllAsync(string companyId)

@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using SaaS.Application.DTOs.Products;
+using SaaS.Application.DTOs.Common;
 using SaaS.Application.Interfaces;
-using SaaS.Domain.Documents;
-using System.Security.Claims;
 
 namespace SaaS.Api.Controllers;
 
@@ -12,31 +12,38 @@ namespace SaaS.Api.Controllers;
 [Authorize]
 public class ProductsController : ControllerBase
 {
-    private readonly IProductRepository _productRepository;
+    private readonly IProductService _productService;
 
-    public ProductsController(IProductRepository productRepository)
+    public ProductsController(IProductService productService)
     {
-        _productRepository = productRepository;
+        _productService = productService;
+    }
+
+    private string GetCompanyId()
+    {
+        return User.FindFirst("companyId")?.Value ?? throw new UnauthorizedAccessException("Company ID not found in token");
     }
 
     /// <summary>
-    /// Obtener todos los productos de la empresa del usuario autenticado
+    /// Búsqueda de productos con soporte OData
+    /// Soporta: $filter, $orderby, $skip, $top, $count
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<List<ProductResponse>>> GetAll()
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(ResponsePagination<ProductResponse>), 200)]
+    [EnableQuery(MaxTop = 100, AllowedQueryOptions = 
+        AllowedQueryOptions.Filter | 
+        AllowedQueryOptions.OrderBy | 
+        AllowedQueryOptions.Skip | 
+        AllowedQueryOptions.Top | 
+        AllowedQueryOptions.Count)]
+    public async Task<IActionResult> Search(ODataQueryOptions<ProductResponse> queryOptions)
     {
         try
         {
-            var companyId = User.FindFirst("companyId")?.Value;
-            if (string.IsNullOrEmpty(companyId))
-            {
-                return Unauthorized(new { message = "Company not found in token" });
-            }
-
-            var products = await _productRepository.GetByCompanyIdAsync(companyId);
-            var response = products.Select(p => MapToResponse(p)).ToList();
-            
-            return Ok(response);
+            var companyId = GetCompanyId();
+            var result = await _productService.SearchAsync(queryOptions, companyId);
+            return Ok(result);
         }
         catch (Exception ex)
         {
@@ -52,25 +59,13 @@ public class ProductsController : ControllerBase
     {
         try
         {
-            var companyId = User.FindFirst("companyId")?.Value;
-            if (string.IsNullOrEmpty(companyId))
-            {
-                return Unauthorized(new { message = "Company not found in token" });
-            }
-
-            var product = await _productRepository.GetByIdAsync(id);
+            var companyId = GetCompanyId();
+            var product = await _productService.GetByIdAsync(id, companyId);
+            
             if (product == null)
-            {
                 return NotFound(new { message = "Product not found" });
-            }
 
-            // Verificar que el producto pertenece a la empresa del usuario (Multi-tenant)
-            if (product.CompanyId != companyId)
-            {
-                return Forbid();
-            }
-
-            return Ok(MapToResponse(product));
+            return Ok(product);
         }
         catch (Exception ex)
         {
@@ -86,32 +81,9 @@ public class ProductsController : ControllerBase
     {
         try
         {
-            var companyId = User.FindFirst("companyId")?.Value;
-            if (string.IsNullOrEmpty(companyId))
-            {
-                return Unauthorized(new { message = "Company not found in token" });
-            }
-
-            var product = new Product
-            {
-                CompanyId = companyId,
-                Name = request.Name,
-                Description = request.Description,
-                Type = request.Type,
-                Price = request.Price,
-                CostPrice = request.CostPrice,
-                TaxRate = request.TaxRate,
-                ImageUrl = request.ImageUrl,
-                Unit = request.Unit,
-                Discount = request.Discount,
-                TrackInventory = request.TrackInventory,
-                StockQuantity = request.Stock,
-                RentalPricePerDay = request.RentalPricePerDay,
-                RentalPricePerHour = request.RentalPricePerHour
-            };
-
-            var created = await _productRepository.CreateAsync(product);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, MapToResponse(created));
+            var companyId = GetCompanyId();
+            var created = await _productService.CreateAsync(request, companyId);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (Exception ex)
         {
@@ -127,42 +99,13 @@ public class ProductsController : ControllerBase
     {
         try
         {
-            var companyId = User.FindFirst("companyId")?.Value;
-            if (string.IsNullOrEmpty(companyId))
-            {
-                return Unauthorized(new { message = "Company not found in token" });
-            }
-
-            var product = await _productRepository.GetByIdAsync(id);
-            if (product == null)
-            {
+            var companyId = GetCompanyId();
+            var updated = await _productService.UpdateAsync(id, request, companyId);
+            
+            if (updated == null)
                 return NotFound(new { message = "Product not found" });
-            }
 
-            // Verificar que el producto pertenece a la empresa del usuario (Multi-tenant)
-            if (product.CompanyId != companyId)
-            {
-                return Forbid();
-            }
-
-            // Actualizar campos
-            product.Name = request.Name;
-            product.Description = request.Description;
-            product.Type = request.Type;
-            product.Price = request.Price;
-            product.CostPrice = request.CostPrice;
-            product.TaxRate = request.TaxRate;
-            product.ImageUrl = request.ImageUrl;
-            product.Unit = request.Unit;
-            product.Discount = request.Discount;
-            product.TrackInventory = request.TrackInventory;
-            product.StockQuantity = request.Stock;
-            product.RentalPricePerDay = request.RentalPricePerDay;
-            product.RentalPricePerHour = request.RentalPricePerHour;
-            product.IsActive = request.IsActive;
-
-            var updated = await _productRepository.UpdateAsync(product);
-            return Ok(MapToResponse(updated));
+            return Ok(updated);
         }
         catch (Exception ex)
         {
@@ -178,55 +121,17 @@ public class ProductsController : ControllerBase
     {
         try
         {
-            var companyId = User.FindFirst("companyId")?.Value;
-            if (string.IsNullOrEmpty(companyId))
-            {
-                return Unauthorized(new { message = "Company not found in token" });
-            }
-
-            var product = await _productRepository.GetByIdAsync(id);
-            if (product == null)
-            {
+            var companyId = GetCompanyId();
+            var success = await _productService.DeleteAsync(id, companyId);
+            
+            if (!success)
                 return NotFound(new { message = "Product not found" });
-            }
 
-            // Verificar que el producto pertenece a la empresa del usuario (Multi-tenant)
-            if (product.CompanyId != companyId)
-            {
-                return Forbid();
-            }
-
-            await _productRepository.DeleteAsync(id);
             return NoContent();
         }
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "An error occurred", error = ex.Message });
         }
-    }
-
-    private static ProductResponse MapToResponse(Product product)
-    {
-        return new ProductResponse
-        {
-            Id = product.Id,
-            CompanyId = product.CompanyId,
-            Name = product.Name,
-            Description = product.Description,
-            Type = product.Type,
-            Price = product.Price,
-            CostPrice = product.CostPrice,
-            TaxRate = product.TaxRate,
-            ImageUrl = product.ImageUrl,
-            Unit = product.Unit,
-            Discount = product.Discount,
-            TrackInventory = product.TrackInventory,
-            Stock = product.StockQuantity,
-            RentalPricePerDay = product.RentalPricePerDay,
-            RentalPricePerHour = product.RentalPricePerHour,
-            IsActive = product.IsActive,
-            CreatedAt = product.CreatedAt,
-            UpdatedAt = product.UpdatedAt
-        };
     }
 }
