@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using MongoDB.Driver;
+using System.Linq;
 using Microsoft.AspNetCore.OData.Query;
 using SaaS.Application.DTOs.Common;
 using SaaS.Application.DTOs.Invoices;
@@ -79,19 +84,43 @@ public class SaleService : ISaleService
             .Take(top)
             .ToList() ?? new List<SaleResponse>();
 
+        // 7. Enriquecer con nombres de clientes
+        if (results.Any())
+        {
+            var customerIds = results.Select(r => r.CustomerId).Distinct().ToList();
+            var customers = await _customerRepository.GetByCompanyIdAsync(companyId); // Podríamos optimizar esto a GetByIds si existiera
+            var customerDict = customers.Where(c => customerIds.Contains(c.Id))
+                                       .ToDictionary(c => c.Id, c => c.Name);
+
+            foreach (var sale in results)
+            {
+                if (customerDict.TryGetValue(sale.CustomerId, out var name))
+                {
+                    sale.CustomerName = name;
+                }
+                else
+                {
+                    sale.CustomerName = "Unknown";
+                }
+            }
+        }
+
         return new ResponsePagination<SaleResponse>
         {
-            Result = results,
-            Page = skip,
+            Items = results,
+            PageNumber = skip / top + 1,
             RowsPerPage = top,
-            TotalRows = totalCount
+            TotalCount = totalCount
         };
     }
 
     public async Task<List<SaleResponse>> GetAllAsync(string companyId)
     {
         var sales = await _saleRepository.GetByCompanyIdAsync(companyId);
-        return sales.Select(MapToResponse).ToList();
+        var customers = await _customerRepository.GetByCompanyIdAsync(companyId);
+        var customerDict = customers.ToDictionary(c => c.Id, c => c.Name);
+
+        return sales.Select(s => MapToResponse(s, customerDict.GetValueOrDefault(s.CustomerId, "Unknown"))).ToList();
     }
 
     public async Task<SaleResponse?> GetByIdAsync(string id, string companyId)
@@ -100,11 +129,15 @@ public class SaleService : ISaleService
         if (sale == null || sale.CompanyId != companyId)
             return null;
 
-        return MapToResponse(sale);
+        var customer = await _customerRepository.GetByIdAsync(sale.CustomerId);
+        return MapToResponse(sale, customer?.Name ?? "Unknown");
     }
 
     public async Task<SaleResponse> CreateAsync(CreateSaleRequest request, string companyId, string userId)
     {
+        if (!Enum.IsDefined(typeof(PaymentMethod), request.PaymentMethod))
+            throw new ArgumentException("Invalid payment method");
+
         // Validar cliente
         var customer = await _customerRepository.GetByIdAsync(request.CustomerId);
         if (customer == null || customer.CompanyId != companyId)
@@ -185,7 +218,7 @@ public class SaleService : ISaleService
             await _customerRepository.UpdateAsync(customer);
         }
 
-        return MapToResponse(created);
+        return MapToResponse(created, customer.Name);
     }
 
     public async Task<SaleResponse?> UpdateAsync(string id, UpdateSaleRequest request, string companyId, string userId)
@@ -247,7 +280,8 @@ public class SaleService : ISaleService
         // TODO Notes...
 
         var updated = await _saleRepository.UpdateAsync(sale);
-        return MapToResponse(updated);
+        var customer = await _customerRepository.GetByIdAsync(sale.CustomerId);
+        return MapToResponse(updated, customer?.Name ?? "Unknown");
     }
 
     public async Task<InvoiceResponse?> GetInvoiceAsync(string saleId, string companyId)
@@ -284,13 +318,14 @@ public class SaleService : ISaleService
         };
     }
 
-    private SaleResponse MapToResponse(Sale sale)
+    private SaleResponse MapToResponse(Sale sale, string customerName)
     {
         return new SaleResponse
         {
             Id = sale.Id,
             CompanyId = sale.CompanyId,
             CustomerId = sale.CustomerId,
+            CustomerName = customerName,
             Number = sale.Number,
             Date = sale.Date,
             Subtotal = sale.Subtotal,

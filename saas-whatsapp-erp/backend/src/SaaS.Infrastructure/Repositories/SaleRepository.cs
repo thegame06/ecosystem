@@ -15,6 +15,24 @@ public class SaleRepository : ISaleRepository
         var database = client.GetDatabase(settings.DatabaseName);
         _sales = database.GetCollection<Sale>("sales");
 
+        // Temporary migration
+        Task.Run(async () => {
+            try {
+                await _sales.UpdateManyAsync(
+                    Builders<Sale>.Filter.Eq("paymentMethod", "Transferencia"),
+                    Builders<Sale>.Update.Set("paymentMethod", "Transfer")
+                );
+                await _sales.UpdateManyAsync(
+                    Builders<Sale>.Filter.Eq("paymentMethod", "Efectivo"),
+                    Builders<Sale>.Update.Set("paymentMethod", "Cash")
+                );
+                await _sales.UpdateManyAsync(
+                    Builders<Sale>.Filter.Eq("paymentMethod", "Tarjeta"),
+                    Builders<Sale>.Update.Set("paymentMethod", "Card")
+                );
+            } catch { /* ignore */ }
+        });
+
         CreateIndexes();
     }
 

@@ -2,6 +2,8 @@ using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.OData;
+using Microsoft.OData.Edm;
+using Microsoft.OData.ModelBuilder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.IdentityModel.Tokens;
@@ -57,12 +59,25 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<PlanLimitFilter>();
 })
 .AddOData(options => options
+    .AddRouteComponents("api", GetEdmModel())
     .Select()
     .Filter()
     .OrderBy()
     .SetMaxTop(100)
     .Count()
 );
+
+static IEdmModel GetEdmModel()
+{
+    var builder = new ODataConventionModelBuilder();
+    builder.EnableLowerCamelCase();
+    builder.EntitySet<SaaS.Application.DTOs.Products.ProductResponse>("Products");
+    builder.EntitySet<SaaS.Application.DTOs.Sales.SaleResponse>("Sales");
+    builder.EntitySet<SaaS.Application.DTOs.Customers.CustomerResponse>("Customers");
+    builder.EntitySet<SaaS.Application.DTOs.Conversations.ConversationResponse>("Conversations");
+    builder.EntitySet<SaaS.Application.DTOs.Invoices.InvoiceResponse>("Invoices");
+    return builder.GetEdmModel();
+}
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
@@ -146,6 +161,22 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Create MongoDB indexes
+try
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var mongoClient = scope.ServiceProvider.GetRequiredService<IMongoClient>();
+        var database = mongoClient.GetDatabase(mongoSettings.DatabaseName);
+        await SaaS.Infrastructure.Mongo.MongoIndexes.CreateIndexesAsync(database);
+        Console.WriteLine("MongoDB indexes verified/created.");
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Warning: Could not create MongoDB indexes: {ex.Message}");
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

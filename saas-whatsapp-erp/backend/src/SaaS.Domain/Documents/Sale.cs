@@ -79,6 +79,13 @@ public class Sale
     public string CreatedByUserId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Payment method used for this sale
+    /// </summary>
+    [BsonElement("paymentMethod")]
+    [BsonRepresentation(BsonType.String)]
+    public PaymentMethod PaymentMethod { get; set; }
+
+    /// <summary>
     /// Items de la venta
     /// </summary>
     [BsonElement("items")]
@@ -99,9 +106,6 @@ public class Sale
     [BsonElement("state")]
     [BsonRepresentation(BsonType.String)]
     public CommercialState State { get; set; } = CommercialState.SALE_CREATED;
-
-    [BsonElement("paymentMethod")]
-    public string? PaymentMethod { get; set; }
 
     [BsonElement("notes")]
     public string? Notes { get; set; }

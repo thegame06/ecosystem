@@ -9,10 +9,15 @@ import {
     Package,
     User,
     AlertCircle,
-    TrendingUp
+    TrendingUp,
+    DollarSign,
+    CreditCard,
+    ArrowRightLeft,
+    Percent
 } from 'lucide-react';
 import { Product } from '../../types/product';
 import { Customer } from '../../types/customer';
+import { PaymentMethod } from '../../types/enums';
 import { CartItem, CreateSaleRequest, SaleError } from '../../types/sale';
 import { productService } from '../../services/productService';
 import { customerService } from '../../services/customerService';
@@ -45,7 +50,11 @@ const SalesPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<SaleError | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Transferencia'>('Efectivo');
+
+    // Payment & Conditions
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.Cash);
+    const [applyTax, setApplyTax] = useState<boolean>(true);
+    const [globalDiscount, setGlobalDiscount] = useState<{ type: 'Fixed' | 'Percentage', value: number } | null>(null);
 
     useEffect(() => {
         loadProducts();
@@ -66,7 +75,7 @@ const SalesPage: React.FC = () => {
         setIsLoadingProducts(true);
         try {
             const response = await productService.getAll();
-            const items = response.data?.result || response.data || [];
+            const items = response.data?.items || response.data || [];
             setProducts(items.filter((p: Product) => p.isActive));
         } catch (err) {
             setError({ message: 'Error al cargar productos' });
@@ -168,9 +177,30 @@ const SalesPage: React.FC = () => {
         setSelectedCustomer(null);
     };
 
-    const cartSubtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
-    const cartTaxTotal = cart.reduce((acc, item) => acc + item.taxAmount, 0);
-    const cartTotal = cart.reduce((acc, item) => acc + item.total, 0);
+    const rawSubtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
+
+    // Calculate global discount amount
+    let discountAmount = 0;
+    if (globalDiscount) {
+        if (globalDiscount.type === 'Percentage') {
+            discountAmount = rawSubtotal * (globalDiscount.value / 100);
+        } else {
+            discountAmount = globalDiscount.value;
+        }
+    }
+
+    // Apply discount cap
+    discountAmount = Math.min(discountAmount, rawSubtotal);
+
+    const cartSubtotal = rawSubtotal - discountAmount;
+
+    // Calculate Tax
+    // This assumes a single tax rate for simplicity when applying global discounts.
+    const cartTaxTotal = applyTax
+        ? cartSubtotal * (companyInfo?.taxRate || 0.15)
+        : 0;
+
+    const cartTotal = cartSubtotal + cartTaxTotal;
 
     const handleSubmit = async () => {
         if (!selectedCustomer || cart.length === 0) return;
@@ -185,10 +215,15 @@ const SalesPage: React.FC = () => {
                     unitPrice: item.unitPrice,
                 })),
                 paymentMethod: paymentMethod,
+                applyTax,
+                globalDiscount: globalDiscount || undefined
             };
             await saleService.create(request);
             setSuccessMessage(`¡Venta creada exitosamente!`);
             clearCart();
+            setGlobalDiscount(null);
+            setApplyTax(true);
+            setPaymentMethod(PaymentMethod.Cash);
         } catch (err) {
             setError(err as SaleError);
         } finally {
@@ -309,10 +344,96 @@ const SalesPage: React.FC = () => {
                 </div>
 
                 <div className="p-6 bg-slate-50 border-t-2 border-slate-200 space-y-4">
+                    {/* Payment Method Selector */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Forma de Pago</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            <button
+                                onClick={() => setPaymentMethod(PaymentMethod.Cash)}
+                                className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${paymentMethod === PaymentMethod.Cash ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300'}`}
+                            >
+                                <DollarSign size={20} className="mb-1" />
+                                <span className="text-[10px] font-bold">Efectivo</span>
+                            </button>
+                            <button
+                                onClick={() => setPaymentMethod(PaymentMethod.Transfer)}
+                                className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${paymentMethod === PaymentMethod.Transfer ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300'}`}
+                            >
+                                <ArrowRightLeft size={20} className="mb-1" />
+                                <span className="text-[10px] font-bold">Transf.</span>
+                            </button>
+                            <button
+                                onClick={() => setPaymentMethod(PaymentMethod.Card)}
+                                className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${paymentMethod === PaymentMethod.Card ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300'}`}
+                            >
+                                <CreditCard size={20} className="mb-1" />
+                                <span className="text-[10px] font-bold">Tarjeta</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Options: Tax & Discount */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setApplyTax(!applyTax)}
+                            className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${applyTax ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-400 border-slate-200'}`}
+                        >
+                            <CheckCircle size={14} className={applyTax ? 'opacity-100' : 'opacity-0'} />
+                            Aplicar IVA
+                        </button>
+
+                        <div className="relative flex-1">
+                            <button
+                                onClick={() => {
+                                    if (globalDiscount) setGlobalDiscount(null);
+                                    else {
+                                        const val = prompt('Descuento (%) o Monto ($). Escribe "10%" o "50"');
+                                        if (val) {
+                                            if (val.includes('%')) {
+                                                setGlobalDiscount({ type: 'Percentage', value: parseFloat(val.replace('%', '')) });
+                                            } else {
+                                                setGlobalDiscount({ type: 'Fixed', value: parseFloat(val) });
+                                            }
+                                        }
+                                    }
+                                }}
+                                className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${globalDiscount ? 'bg-amber-100 text-amber-900 border-amber-200' : 'bg-white text-slate-400 border-slate-200'}`}
+                            >
+                                <Percent size={14} />
+                                {globalDiscount ? (globalDiscount.type === 'Percentage' ? `-${globalDiscount.value}%` : `-$${globalDiscount.value}`) : 'Descuento'}
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-slate-500 font-bold"><span>Subtotal</span><span>{companyInfo?.currencySymbol || '$'}{cartSubtotal.toFixed(2)}</span></div>
-                        <div className="flex justify-between text-xs text-slate-500 font-bold"><span>IVA ({((companyInfo?.taxRate || 0.15) * 100).toFixed(0)}%)</span><span>{companyInfo?.currencySymbol || '$'}{cartTaxTotal.toFixed(2)}</span></div>
-                        <div className="flex justify-between text-2xl font-black text-slate-900 pt-2"><span>TOTAL</span><span className="text-primary-600">{companyInfo?.currencySymbol || '$'}{cartTotal.toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xs text-slate-500 font-bold">
+                            <span>Subtotal</span>
+                            <span>{companyInfo?.currencySymbol || '$'}{rawSubtotal.toFixed(2)}</span>
+                        </div>
+
+                        {discountAmount > 0 && (
+                            <div className="flex justify-between text-xs text-amber-600 font-bold">
+                                <span>Descuento</span>
+                                <span>-{companyInfo?.currencySymbol || '$'}{discountAmount.toFixed(2)}</span>
+                            </div>
+                        )}
+
+                        {discountAmount > 0 && (
+                            <div className="flex justify-between text-xs text-slate-700 font-bold border-t border-slate-200 pt-1 mt-1">
+                                <span>Subtotal Neto</span>
+                                <span>{companyInfo?.currencySymbol || '$'}{cartSubtotal.toFixed(2)}</span>
+                            </div>
+                        )}
+
+                        <div className="flex justify-between text-xs text-slate-500 font-bold">
+                            <span>IVA {applyTax ? `(${((companyInfo?.taxRate || 0.15) * 100).toFixed(0)}%)` : '(0%)'}</span>
+                            <span>{companyInfo?.currencySymbol || '$'}{cartTaxTotal.toFixed(2)}</span>
+                        </div>
+
+                        <div className="flex justify-between text-2xl font-black text-slate-900 pt-2 border-t border-slate-200 mt-1">
+                            <span>TOTAL</span>
+                            <span className="text-primary-600">{companyInfo?.currencySymbol || '$'}{cartTotal.toFixed(2)}</span>
+                        </div>
                     </div>
 
                     {error && (
@@ -324,25 +445,6 @@ const SalesPage: React.FC = () => {
                             </div>
                         </div>
                     )}
-
-                    {/* Forma de Pago */}
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Forma de Pago</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                onClick={() => setPaymentMethod('Efectivo')}
-                                className={`py-3 px-4 rounded-xl text-sm font-bold border-2 transition-all ${paymentMethod === 'Efectivo' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
-                            >
-                                💵 Efectivo
-                            </button>
-                            <button
-                                onClick={() => setPaymentMethod('Transferencia')}
-                                className={`py-3 px-4 rounded-xl text-sm font-bold border-2 transition-all ${paymentMethod === 'Transferencia' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
-                            >
-                                🏦 Transferencia
-                            </button>
-                        </div>
-                    </div>
 
                     {successMessage && <div className="p-4 rounded-xl border-2 bg-green-50 border-green-200 text-green-900 flex gap-3"><CheckCircle size={20} className="shrink-0" /> <div className="text-sm font-black">{successMessage}</div></div>}
 

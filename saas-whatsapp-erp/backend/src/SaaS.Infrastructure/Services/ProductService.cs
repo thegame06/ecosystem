@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using MongoDB.Driver;
+using System.Linq;
 using Microsoft.AspNetCore.OData.Query;
 using SaaS.Application.DTOs.Common;
 using SaaS.Application.DTOs.Products;
@@ -41,6 +46,7 @@ public class ProductService : IProductService
             Stock = product.StockQuantity,
             RentalPricePerDay = product.RentalPricePerDay,
             RentalPricePerHour = product.RentalPricePerHour,
+            IsTaxable = product.IsTaxable,
             PriceIncludesTax = product.PriceIncludesTax,
             IsActive = product.IsActive,
             CreatedAt = product.CreatedAt,
@@ -65,10 +71,10 @@ public class ProductService : IProductService
 
         return new ResponsePagination<ProductResponse>
         {
-            Result = results,
-            Page = skip,
+            Items = results,
+            PageNumber = skip / top + 1, // Convert skip to page number if frontend expects 1-based page
             RowsPerPage = top,
-            TotalRows = totalCount
+            TotalCount = totalCount
         };
     }
 
@@ -97,6 +103,7 @@ public class ProductService : IProductService
             Discount = request.Discount,
             TrackInventory = request.TrackInventory,
             StockQuantity = request.Stock,
+            IsTaxable = request.IsTaxable,
             PriceIncludesTax = request.PriceIncludesTax
         };
 
@@ -121,6 +128,7 @@ public class ProductService : IProductService
         product.Discount = request.Discount;
         product.TrackInventory = request.TrackInventory;
         product.StockQuantity = request.Stock;
+        product.IsTaxable = request.IsTaxable;
         product.PriceIncludesTax = request.PriceIncludesTax;
         product.IsActive = request.IsActive;
 
@@ -155,6 +163,7 @@ public class ProductService : IProductService
             Discount = product.Discount,
             TrackInventory = product.TrackInventory,
             Stock = product.StockQuantity,
+            IsTaxable = product.IsTaxable,
             PriceIncludesTax = product.PriceIncludesTax,
             IsActive = product.IsActive,
             CreatedAt = product.CreatedAt,

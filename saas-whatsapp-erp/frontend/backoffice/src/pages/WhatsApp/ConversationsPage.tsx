@@ -27,10 +27,11 @@ const ConversationsPage: React.FC = () => {
         try {
             setIsLoading(true);
             const response = await conversationService.getAll();
-            setConversations(response.data.result);
-            if (response.data.result.length > 0 && !selectedId) {
+            const items = response.data?.items || [];
+            setConversations(items);
+            if (items.length > 0 && !selectedId) {
                 // Auto select first one for demo
-                setSelectedId(response.data.result[0].id);
+                setSelectedId(items[0].id);
             }
         } catch (err) {
             console.error(err);

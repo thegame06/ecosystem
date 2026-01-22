@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using SaaS.Domain.Enums;
 
 namespace SaaS.Application.DTOs.Sales;
 
@@ -22,5 +23,9 @@ public class CreateSaleRequest
     [MinLength(1)]
     public List<CreateSaleItemRequest> Items { get; set; } = new();
 
-    public string? PaymentMethod { get; set; }
+    /// <summary>
+    /// Payment method for this sale
+    /// </summary>
+    [Required(ErrorMessage = "Payment method is required")]
+    public PaymentMethod PaymentMethod { get; set; }
 }

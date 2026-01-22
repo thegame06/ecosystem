@@ -1,7 +1,7 @@
-# PRODUCT DEFINITION – SaaS Ventas + Facturación + WhatsApp
+# PRODUCT DEFINITION – Annonai Flow
 
 ## Visión
-Un SaaS que permite a las PYMEs vender, facturar y comunicarse con clientes
+**Annonai Flow** es un SaaS que permite a las PYMEs vender, facturar y comunicarse con clientes
 usando WhatsApp como canal principal, desde un solo sistema simple,
 configurable y orientado a cerrar ventas más rápido.
 
@@ -141,19 +141,33 @@ Diferenciador clave:
 - Órdenes de venta
 - POS rápido (web)
 - Descuentos:
-  - Por producto
+  - Por producto (si está habilitado en el producto)
   - Globales por venta
 - Cálculo automático de impuestos
-- Ventas con o sin IVA
-- Pagos registrados:
+- Ventas con o sin IVA (configurable por venta)
+- Formas de pago:
   - Efectivo
   - Transferencia
+  - Tarjeta
+
+**Reglas de IVA:**
+- La empresa puede habilitar/deshabilitar IVA globalmente
+- Cada producto puede ser taxable o exento
+- El usuario puede elegir aplicar o no IVA en cada venta
+- El cálculo sigue estrictamente `pricing_calculation_rules.md`
+
+**Reglas de Descuentos:**
+- Descuento por producto: solo si `Product.AllowDiscount = true`
+- Descuento global: se aplica después de descuentos por línea
+- Tipos: Fijo o Porcentaje
+- No puede dejar subtotal negativo
 
 **MVP:**
 - POS web
-- Descuentos simples
-- Registro manual de pagos
+- Descuentos simples (por producto y global)
+- Registro manual de pagos (3 formas de pago)
 - Sin conciliación bancaria
+- IVA flexible (con/sin IVA por venta)
 
 ---
 

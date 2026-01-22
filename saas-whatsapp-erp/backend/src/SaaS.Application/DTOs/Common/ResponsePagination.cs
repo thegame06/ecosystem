@@ -1,3 +1,5 @@
+using System;
+
 namespace SaaS.Application.DTOs.Common;
 
 /// <summary>
@@ -8,12 +10,12 @@ public class ResponsePagination<T>
     /// <summary>
     /// Resultados de la página actual
     /// </summary>
-    public List<T> Result { get; set; } = new();
+    public List<T> Items { get; set; } = new();
     
     /// <summary>
-    /// Número de registros omitidos ($skip)
+    /// Número de registros omitidos ($skip) / número de página actual
     /// </summary>
-    public int Page { get; set; }
+    public int PageNumber { get; set; }
     
     /// <summary>
     /// Cantidad de registros por página ($top)
@@ -23,5 +25,9 @@ public class ResponsePagination<T>
     /// <summary>
     /// Total de registros disponibles ($count)
     /// </summary>
-    public long TotalRows { get; set; }
+    public long TotalCount { get; set; }
+
+    public int TotalPages => RowsPerPage > 0 ? (int)Math.Ceiling((double)TotalCount / RowsPerPage) : 0;
+    public bool HasNextPage => PageNumber * RowsPerPage < TotalCount;
+    public bool HasPreviousPage => PageNumber > 1;
 }

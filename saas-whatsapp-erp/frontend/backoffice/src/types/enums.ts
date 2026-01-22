@@ -68,3 +68,15 @@ export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
     [InvoiceStatus.Paid]: 'bg-emerald-100 text-emerald-700',
     [InvoiceStatus.Cancelled]: 'bg-red-100 text-red-700'
 };
+
+export enum PaymentMethod {
+    Cash = 1,
+    Transfer = 2,
+    Card = 3
+}
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+    [PaymentMethod.Cash]: 'Efectivo',
+    [PaymentMethod.Transfer]: 'Transferencia',
+    [PaymentMethod.Card]: 'Tarjeta'
+};

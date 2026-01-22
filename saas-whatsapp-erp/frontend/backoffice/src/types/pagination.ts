@@ -7,10 +7,13 @@ export interface PagedRequest {
 }
 
 export interface PagedResponse<T> {
-    result: T[];
-    totalRows: number;
-    page: number; // Skip
-    rowsPerPage: number; // Top
+    items: T[];
+    pageNumber: number;
+    rowsPerPage: number;
+    totalCount: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
 }
 
 export interface ApiResponse<T> {

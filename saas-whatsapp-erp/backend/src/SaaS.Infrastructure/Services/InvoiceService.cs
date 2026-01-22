@@ -79,10 +79,10 @@ public class InvoiceService : IInvoiceService
 
         return new ResponsePagination<InvoiceResponse>
         {
-            Result = results,
-            Page = skip,
+            Items = results,
+            PageNumber = skip / top + 1,
             RowsPerPage = top,
-            TotalRows = totalCount
+            TotalCount = totalCount
         };
     }
 

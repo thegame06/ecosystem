@@ -63,10 +63,10 @@ public class ConversationService : IConversationService
 
         return new ResponsePagination<ConversationResponse>
         {
-            Result = results,
-            Page = skip,
+            Items = results,
+            PageNumber = skip / top + 1,
             RowsPerPage = top,
-            TotalRows = totalCount
+            TotalCount = totalCount
         };
     }
 

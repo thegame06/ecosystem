@@ -1,4 +1,4 @@
-import { CommercialState } from './enums';
+import { CommercialState, PaymentMethod } from './enums';
 
 // ============================================
 // REQUEST TYPES (Frontend → Backend)
@@ -21,7 +21,12 @@ export interface CreateSaleItemRequest {
 export interface CreateSaleRequest {
     customerId: string;
     items: CreateSaleItemRequest[];
-    paymentMethod?: string;
+    paymentMethod: PaymentMethod;
+    applyTax?: boolean;
+    globalDiscount?: {
+        type: 'Fixed' | 'Percentage';
+        value: number;
+    };
 }
 
 // ============================================
@@ -46,18 +51,23 @@ export interface SaleItemResponse {
 
 /**
  * Respuesta de venta del backend
+ * Actualizada para coincidir con la interfaz Sale de la guía
  */
-export interface SaleResponse {
+export interface Sale {
     id: string;
     companyId: string;
     customerId: string;
+    customerName: string;
     items: SaleItemResponse[];
+    paymentMethod: PaymentMethod;
     subtotal: number;
     taxTotal: number;
     total: number;
     state: CommercialState;
     createdAt: string;
 }
+
+export type SaleResponse = Sale;
 
 // ============================================
 // UI TYPES (Solo para frontend)

@@ -29,14 +29,9 @@ public class ConversationsController : ControllerBase
     /// <summary>
     /// Búsqueda de conversaciones con soporte OData
     /// </summary>
+    [HttpGet]
     [HttpGet("search")]
     [ProducesResponseType(typeof(ResponsePagination<ConversationResponse>), 200)]
-    [EnableQuery(MaxTop = 100, AllowedQueryOptions = 
-        AllowedQueryOptions.Filter | 
-        AllowedQueryOptions.OrderBy | 
-        AllowedQueryOptions.Skip | 
-        AllowedQueryOptions.Top | 
-        AllowedQueryOptions.Count)]
     public async Task<IActionResult> Search(ODataQueryOptions<ConversationResponse> queryOptions)
     {
         try

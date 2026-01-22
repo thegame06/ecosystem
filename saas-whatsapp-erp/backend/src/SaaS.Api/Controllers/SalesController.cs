@@ -35,6 +35,7 @@ public class SalesController : ControllerBase
     /// <summary>
     /// Búsqueda de ventas con soporte OData
     /// </summary>
+    [HttpGet]
     [HttpGet("search")]
     [ProducesResponseType(typeof(ResponsePagination<SaleResponse>), 200)]
     public async Task<IActionResult> Search(ODataQueryOptions<SaleResponse> queryOptions)

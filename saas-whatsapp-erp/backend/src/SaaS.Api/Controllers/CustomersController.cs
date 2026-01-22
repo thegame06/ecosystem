@@ -32,12 +32,6 @@ public class CustomersController : ControllerBase
     [HttpGet]
     [HttpGet("search")]
     [ProducesResponseType(typeof(ResponsePagination<CustomerResponse>), 200)]
-    [EnableQuery(MaxTop = 100, AllowedQueryOptions = 
-        AllowedQueryOptions.Filter | 
-        AllowedQueryOptions.OrderBy | 
-        AllowedQueryOptions.Skip | 
-        AllowedQueryOptions.Top | 
-        AllowedQueryOptions.Count)]
     public async Task<IActionResult> Search(ODataQueryOptions<CustomerResponse> queryOptions)
     {
         try

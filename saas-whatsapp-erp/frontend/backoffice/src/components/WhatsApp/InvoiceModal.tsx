@@ -36,7 +36,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, saleId, cu
         try {
             setIsLoading(true);
             const response = await saleService.getById(saleId);
-            setSale(response.data);
+            setSale(response);
         } catch (err) {
             console.error(err);
         } finally {
@@ -167,7 +167,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, saleId, cu
                             <div className="space-y-2 border-t border-slate-200 pt-4">
                                 {sale?.items.map((item, i) => (
                                     <div key={i} className="flex justify-between text-sm">
-                                        <span className="text-slate-500">{item.quantity} x {item.productName}</span>
+                                        <span className="text-slate-500">{item.quantity} x {item.nameSnapshot}</span>
                                         <span className="font-bold text-slate-700">${item.total.toFixed(2)}</span>
                                     </div>
                                 ))}

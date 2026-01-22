@@ -20,6 +20,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
     console.error('[API Error]:', error.response?.data || error.message);
 
     if (error.response?.status === 401) {

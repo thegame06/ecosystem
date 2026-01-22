@@ -1,3 +1,5 @@
+using SaaS.Domain.Enums;
+
 namespace SaaS.Application.DTOs.Sales;
 
 public class SaleItemResponse
@@ -16,13 +18,14 @@ public class SaleResponse
     public string Id { get; set; } = string.Empty;
     public string CompanyId { get; set; } = string.Empty;
     public string CustomerId { get; set; } = string.Empty;
+    public string CustomerName { get; set; } = string.Empty;
     public string Number { get; set; } = string.Empty;
     public DateTime Date { get; set; }
     public decimal Subtotal { get; set; }
     public decimal TaxAmount { get; set; }
     public decimal Total { get; set; }
     public string Status { get; set; } = string.Empty;
-    public string? PaymentMethod { get; set; }
+    public PaymentMethod PaymentMethod { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<SaleItemResponse> Items { get; set; } = new();
 }

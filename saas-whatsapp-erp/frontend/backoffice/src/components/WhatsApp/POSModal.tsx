@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle, Package, User } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle, Package, User, DollarSign, CreditCard } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { Product } from '../../types/product';
 import { productService } from '../../services/productService';
 import { saleService } from '../../services/saleService';
 import { companyService, CompanyInfo } from '../../services/companyService';
 import { CreateSaleRequest, CartItem } from '../../types/sale';
+import { PaymentMethod } from '../../types/enums';
 
 interface POSModalProps {
     isOpen: boolean;
@@ -22,6 +23,9 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
     const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.Cash);
+    const [applyTax, setApplyTax] = useState<boolean>(true);
+    const [globalDiscount, setGlobalDiscount] = useState<{ type: 'Fixed' | 'Percentage', value: number } | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -34,6 +38,7 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
         try {
             const response = await companyService.getMe();
             setCompanyInfo(response.data);
+            setApplyTax(response.data.isTaxEnabled);
         } catch (err) {
             console.error(err);
         }
@@ -43,7 +48,7 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
         try {
             setIsLoading(true);
             const response = await productService.getAll();
-            const items = response.data?.result || response.data || [];
+            const items = response.data?.items || response.data || [];
             setProducts(items.filter((p: Product) => p.isActive));
         } catch (err) {
             console.error(err);
@@ -128,8 +133,32 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
     };
 
     const cartSubtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
-    const cartTaxTotal = cart.reduce((acc, item) => acc + item.taxAmount, 0);
-    const cartTotal = cart.reduce((acc, item) => acc + item.total, 0);
+
+    const calculateFinalTotals = () => {
+        let subtotal = cartSubtotal;
+        let taxTotal = 0;
+
+        // Re-calculate tax based on applyTax toggle
+        cart.forEach(item => {
+            if (applyTax && item.isTaxable) {
+                taxTotal += item.taxAmount;
+            }
+        });
+
+        // Apply global discount
+        let discountAmount = 0;
+        if (globalDiscount) {
+            discountAmount = globalDiscount.type === 'Percentage'
+                ? subtotal * (globalDiscount.value / 100)
+                : globalDiscount.value;
+            subtotal = Math.max(0, subtotal - discountAmount);
+        }
+
+        const total = subtotal + taxTotal;
+        return { subtotal, taxTotal, total };
+    };
+
+    const { subtotal: finalSubtotal, taxTotal: finalTaxTotal, total: finalTotal } = calculateFinalTotals();
 
     const handleSubmit = async () => {
         if (cart.length === 0) return;
@@ -137,6 +166,9 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
         try {
             const request: CreateSaleRequest = {
                 customerId,
+                paymentMethod,
+                applyTax,
+                globalDiscount: globalDiscount || undefined,
                 items: cart.map(item => ({
                     productId: item.productId,
                     quantity: item.quantity,
@@ -173,15 +205,15 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                     <div className="flex gap-8 text-slate-800">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subtotal</span>
-                            <span className="text-xl font-bold">{companyInfo?.currencySymbol || '$'}{cartSubtotal.toFixed(2)}</span>
+                            <span className="text-xl font-bold">{companyInfo?.currencySymbol || '$'}{finalSubtotal.toFixed(2)}</span>
                         </div>
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IVA ({((companyInfo?.taxRate || 0.15) * 100).toFixed(0)}%)</span>
-                            <span className="text-xl font-bold">{companyInfo?.currencySymbol || '$'}{cartTaxTotal.toFixed(2)}</span>
+                            <span className="text-xl font-bold">{companyInfo?.currencySymbol || '$'}{finalTaxTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-primary-600">Total a Pagar</span>
-                            <span className="text-3xl font-black text-slate-900">{companyInfo?.currencySymbol || '$'}{cartTotal.toFixed(2)}</span>
+                            <span className="text-3xl font-black text-slate-900">{companyInfo?.currencySymbol || '$'}{finalTotal.toFixed(2)}</span>
                         </div>
                     </div>
                     <button
@@ -270,6 +302,107 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                                 </div>
                             ))
                         )}
+                    </div>
+
+                    <div className="p-4 bg-white border-t border-slate-200 space-y-4">
+                        {/* Tax Toggle */}
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                            <label className="flex items-center gap-3 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    className="w-5 h-5 rounded-lg border-slate-300 text-primary-600 focus:ring-primary-500 transition-all"
+                                    checked={applyTax}
+                                    onChange={(e) => setApplyTax(e.target.checked)}
+                                />
+                                <span className="text-xs font-black text-slate-600 uppercase tracking-wider">Aplicar IVA</span>
+                            </label>
+                            <span className="text-xs font-bold text-slate-400 italic">IVA {((companyInfo?.taxRate || 0.15) * 100).toFixed(0)}%</span>
+                        </div>
+
+                        {/* Global Discount */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between px-1">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descuento Global</span>
+                                {globalDiscount && (
+                                    <button
+                                        onClick={() => setGlobalDiscount(null)}
+                                        className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:underline"
+                                    >
+                                        Quitar
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <select
+                                    className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-primary-500/10 transition-all"
+                                    value={globalDiscount?.type || ''}
+                                    onChange={(e) => {
+                                        if (!e.target.value) {
+                                            setGlobalDiscount(null);
+                                        } else {
+                                            setGlobalDiscount({
+                                                type: e.target.value as 'Fixed' | 'Percentage',
+                                                value: globalDiscount?.value || 0
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <option value="">Sin Descuento</option>
+                                    <option value="Fixed">Monto Fijo</option>
+                                    <option value="Percentage">Porcentaje (%)</option>
+                                </select>
+                                {globalDiscount && (
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        className="w-24 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-primary-500/10 transition-all"
+                                        value={globalDiscount.value}
+                                        onChange={(e) => setGlobalDiscount({
+                                            ...globalDiscount,
+                                            value: parseFloat(e.target.value) || 0
+                                        })}
+                                        placeholder={globalDiscount.type === 'Percentage' ? '%' : '$'}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Payment Method Selector */}
+                        <div className="space-y-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Forma de Pago</span>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button
+                                    onClick={() => setPaymentMethod(PaymentMethod.Cash)}
+                                    className={`flex flex-col items-center gap-1 p-2 rounded-2xl border-2 transition-all ${paymentMethod === PaymentMethod.Cash
+                                        ? 'border-primary-500 bg-primary-50 text-primary-600'
+                                        : 'border-slate-100 bg-slate-50 text-slate-400 grayscale'
+                                        }`}
+                                >
+                                    <DollarSign size={16} />
+                                    <span className="text-[10px] font-black uppercase tracking-tighter">Efectivo</span>
+                                </button>
+                                <button
+                                    onClick={() => setPaymentMethod(PaymentMethod.Transfer)}
+                                    className={`flex flex-col items-center gap-1 p-2 rounded-2xl border-2 transition-all ${paymentMethod === PaymentMethod.Transfer
+                                        ? 'border-primary-500 bg-primary-50 text-primary-600'
+                                        : 'border-slate-100 bg-slate-50 text-slate-400 grayscale'
+                                        }`}
+                                >
+                                    <CreditCard size={16} />
+                                    <span className="text-[10px] font-black uppercase tracking-tighter">Transf.</span>
+                                </button>
+                                <button
+                                    onClick={() => setPaymentMethod(PaymentMethod.Card)}
+                                    className={`flex flex-col items-center gap-1 p-2 rounded-2xl border-2 transition-all ${paymentMethod === PaymentMethod.Card
+                                        ? 'border-primary-500 bg-primary-50 text-primary-600'
+                                        : 'border-slate-100 bg-slate-50 text-slate-400 grayscale'
+                                        }`}
+                                >
+                                    <CreditCard size={16} />
+                                    <span className="text-[10px] font-black uppercase tracking-tighter">Tarjeta</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -54,6 +54,12 @@ public class Product
     public decimal? TaxRate { get; set; }
 
     /// <summary>
+    /// Indica si el producto está sujeto a impuestos
+    /// </summary>
+    [BsonElement("isTaxable")]
+    public bool IsTaxable { get; set; } = true;
+
+    /// <summary>
     /// Indica si el precio de venta ya incluye el IVA
     /// </summary>
     [BsonElement("priceIncludesTax")]

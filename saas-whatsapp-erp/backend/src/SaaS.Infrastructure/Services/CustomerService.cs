@@ -64,10 +64,10 @@ public class CustomerService : ICustomerService
 
         return new ResponsePagination<CustomerResponse>
         {
-            Result = results,
-            Page = skip,
+            Items = results,
+            PageNumber = skip / top + 1,
             RowsPerPage = top,
-            TotalRows = totalCount
+            TotalCount = totalCount
         };
     }
 

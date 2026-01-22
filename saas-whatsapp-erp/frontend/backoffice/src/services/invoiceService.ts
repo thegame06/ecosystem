@@ -1,5 +1,4 @@
 import api from './api';
-import { Invoice } from './invoiceService';
 import { PagedResponse } from '../types/pagination';
 
 export const invoiceService = {

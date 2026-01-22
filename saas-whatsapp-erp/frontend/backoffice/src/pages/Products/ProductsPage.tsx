@@ -6,12 +6,32 @@ import { productService } from '../../services/productService';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
 import Modal from '../../components/Common/Modal';
+import { useServerPagination } from '../../hooks/useServerPagination';
 
 const ProductsPage: React.FC = () => {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [filters, setFilters] = useState({
+        type: '',
+        isActive: ''
+    });
+    const [pageSize, setPageSize] = useState(20);
+
+    const {
+        data: products,
+        pagination,
+        loading,
+        error,
+        goToPage,
+        refresh
+    } = useServerPagination<Product>({
+        endpoint: '/products',
+        pageSize,
+        filters,
+        searchTerm,
+        orderBy: 'name asc'
+    });
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<CreateProductRequest>({
@@ -30,20 +50,9 @@ const ProductsPage: React.FC = () => {
     });
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadProducts();
-    }, []);
-
+    // No local loadProducts needed anymore as hook handles it
     const loadProducts = async () => {
-        setIsLoading(true);
-        try {
-            const response = await productService.getAll();
-            setProducts(response.data.result || []);
-        } catch (error) {
-            console.error('Error loading products:', error);
-        } finally {
-            setIsLoading(false);
-        }
+        refresh();
     };
 
     const handleOpenModal = () => {
@@ -132,9 +141,7 @@ const ProductsPage: React.FC = () => {
         }
     };
 
-    const filteredProducts = (products || []).filter(p =>
-        p && p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredProducts = products; // Already filtered by server
 
     return (
         <div className="space-y-6">
@@ -155,8 +162,8 @@ const ProductsPage: React.FC = () => {
             </div>
 
             {/* Filters / Search */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-4">
-                <div className="relative flex-1 max-w-md">
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex flex-wrap items-center gap-4">
+                <div className="relative flex-1 min-w-[300px]">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Search size={18} className="text-gray-400" />
                     </div>
@@ -167,6 +174,33 @@ const ProductsPage: React.FC = () => {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Tipo:</label>
+                    <select
+                        className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                        value={filters.type}
+                        onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                    >
+                        <option value="">Todos los tipos</option>
+                        <option value={ProductType.Tangible}>Tangibles</option>
+                        <option value={ProductType.Service}>Servicios</option>
+                        <option value={ProductType.Rentable}>Rentas</option>
+                    </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Estado:</label>
+                    <select
+                        className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                        value={filters.isActive}
+                        onChange={(e) => setFilters(prev => ({ ...prev, isActive: e.target.value }))}
+                    >
+                        <option value="">Todos</option>
+                        <option value="true">Activos</option>
+                        <option value="false">Inactivos</option>
+                    </select>
                 </div>
             </div>
 
@@ -183,13 +217,19 @@ const ProductsPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {isLoading ? (
+                        {loading ? (
                             <tr>
                                 <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
                                     Cargando productos...
                                 </td>
                             </tr>
-                        ) : filteredProducts.map((product) => (
+                        ) : error ? (
+                            <tr>
+                                <td colSpan={5} className="px-6 py-10 text-center text-red-500">
+                                    {error}
+                                </td>
+                            </tr>
+                        ) : products.map((product) => (
                             <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm font-medium text-gray-900">{product.name}</div>
@@ -232,9 +272,71 @@ const ProductsPage: React.FC = () => {
                         ))}
                     </tbody>
                 </table>
-                {!isLoading && filteredProducts.length === 0 && (
+                {!loading && products.length === 0 && (
                     <div className="p-8 text-center text-gray-500">
                         No se encontraron productos. Crea uno nuevo para comenzar.
+                    </div>
+                )}
+
+                {/* Pagination Footer */}
+                {!loading && products.length > 0 && (
+                    <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                            <Button
+                                onClick={() => goToPage(pagination.pageNumber - 1)}
+                                disabled={!pagination.hasPreviousPage}
+                                variant="secondary"
+                            >
+                                Anterior
+                            </Button>
+                            <Button
+                                onClick={() => goToPage(pagination.pageNumber + 1)}
+                                disabled={!pagination.hasNextPage}
+                                variant="secondary"
+                            >
+                                Siguiente
+                            </Button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm text-gray-700">
+                                    Mostrando <span className="font-medium">{(pagination.pageNumber - 1) * pagination.pageSize + 1}</span> a <span className="font-medium">{Math.min(pagination.pageNumber * pagination.pageSize, pagination.totalCount)}</span> de <span className="font-medium">{pagination.totalCount}</span> resultados
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <select
+                                    className="block w-24 pl-3 pr-10 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                                    value={pageSize}
+                                    onChange={(e) => setPageSize(Number(e.target.value))}
+                                >
+                                    <option value={10}>10 / pág</option>
+                                    <option value={20}>20 / pág</option>
+                                    <option value={50}>50 / pág</option>
+                                    <option value={100}>100 / pág</option>
+                                </select>
+                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <button
+                                        onClick={() => goToPage(pagination.pageNumber - 1)}
+                                        disabled={!pagination.hasPreviousPage}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <span className="sr-only">Anterior</span>
+                                        &larr;
+                                    </button>
+                                    <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                        Pág. {pagination.pageNumber} de {pagination.totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() => goToPage(pagination.pageNumber + 1)}
+                                        disabled={!pagination.hasNextPage}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <span className="sr-only">Siguiente</span>
+                                        &rarr;
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

@@ -28,14 +28,9 @@ public class InvoicesController : ControllerBase
     /// <summary>
     /// Búsqueda de facturas con soporte OData
     /// </summary>
+    [HttpGet]
     [HttpGet("search")]
     [ProducesResponseType(typeof(ResponsePagination<InvoiceResponse>), 200)]
-    [EnableQuery(MaxTop = 100, AllowedQueryOptions = 
-        AllowedQueryOptions.Filter | 
-        AllowedQueryOptions.OrderBy | 
-        AllowedQueryOptions.Skip | 
-        AllowedQueryOptions.Top | 
-        AllowedQueryOptions.Count)]
     public async Task<IActionResult> Search(ODataQueryOptions<InvoiceResponse> queryOptions)
     {
         try

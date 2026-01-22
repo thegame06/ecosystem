@@ -99,6 +99,7 @@ Represents a commercial transaction.
 - `CompanyId`
 - `CustomerId`
 - `Items` (`SaleItem[]`)
+- `PaymentMethod` (`Cash`, `Transfer`, `Card`)
 - `Subtotal`
 - `TaxTotal`
 - `Total`
@@ -106,6 +107,11 @@ Represents a commercial transaction.
 - `CreatedAt`
 
 Sale totals MUST follow `pricing_calculation_rules.md`.
+
+**Payment Methods**:
+- `Cash` - Efectivo
+- `Transfer` - Transferencia bancaria
+- `Card` - Tarjeta de crédito/débito
 
 ---
 
@@ -230,6 +236,16 @@ Values:
 - `None`
 - `Fixed`
 - `Percentage`
+
+---
+
+### PaymentMethod (`PaymentMethod.cs`)
+Defines payment method for sales.
+
+Values:
+- `Cash` - Efectivo
+- `Transfer` - Transferencia bancaria
+- `Card` - Tarjeta de crédito/débito
 
 ---
 
