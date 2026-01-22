@@ -25,6 +25,13 @@ public class SalesController : ControllerBase
         return User.FindFirst("companyId")?.Value ?? throw new UnauthorizedAccessException("Company ID not found in token");
     }
 
+    private string GetUserId()
+    {
+        return User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+            ?? User.FindFirst("sub")?.Value 
+            ?? throw new UnauthorizedAccessException("User ID not found in token");
+    }
+
     /// <summary>
     /// Búsqueda de ventas con soporte OData
     /// </summary>
@@ -63,7 +70,7 @@ public class SalesController : ControllerBase
     {
         try
         {
-            var created = await _saleService.CreateAsync(request, GetCompanyId());
+            var created = await _saleService.CreateAsync(request, GetCompanyId(), GetUserId());
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (ArgumentException ex)
@@ -82,7 +89,7 @@ public class SalesController : ControllerBase
     {
         try
         {
-            var updated = await _saleService.UpdateAsync(id, request, GetCompanyId());
+            var updated = await _saleService.UpdateAsync(id, request, GetCompanyId(), GetUserId());
             if (updated == null) return NotFound();
             return Ok(updated);
         }

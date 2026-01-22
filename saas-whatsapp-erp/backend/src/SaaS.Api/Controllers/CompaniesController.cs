@@ -74,4 +74,23 @@ public class CompaniesController : ControllerBase
         await _companyRepository.UpdatePlanAsync(GetCompanyId(), plan);
         return Ok(new { message = $"Plan actualizado a {plan}" });
     }
+
+    [HttpPut("me")]
+    public async Task<ActionResult> UpdateMe([FromBody] Company company)
+    {
+        var existing = await _companyRepository.GetByIdAsync(GetCompanyId());
+        if (existing == null) return NotFound();
+
+        // Only allow updating certain fields
+        existing.Name = company.Name;
+        existing.Country = company.Country;
+        existing.TaxRate = company.TaxRate;
+        existing.IsTaxEnabled = company.IsTaxEnabled;
+        existing.CurrencySymbol = company.CurrencySymbol;
+        existing.WhatsAppSettings = company.WhatsAppSettings;
+        existing.UpdatedAt = DateTime.UtcNow;
+
+        await _companyRepository.UpdateAsync(existing);
+        return Ok(existing);
+    }
 }

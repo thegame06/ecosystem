@@ -54,6 +54,12 @@ public class Product
     public decimal? TaxRate { get; set; }
 
     /// <summary>
+    /// Indica si el precio de venta ya incluye el IVA
+    /// </summary>
+    [BsonElement("priceIncludesTax")]
+    public bool PriceIncludesTax { get; set; } = false;
+
+    /// <summary>
     /// URL de la imagen del producto
     /// </summary>
     [BsonElement("imageUrl")]

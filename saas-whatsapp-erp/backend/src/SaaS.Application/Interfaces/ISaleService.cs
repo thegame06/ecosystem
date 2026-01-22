@@ -10,7 +10,7 @@ public interface ISaleService
     Task<ResponsePagination<SaleResponse>> SearchAsync(ODataQueryOptions<SaleResponse> queryOptions, string companyId);
     Task<List<SaleResponse>> GetAllAsync(string companyId);
     Task<SaleResponse?> GetByIdAsync(string id, string companyId);
-    Task<SaleResponse> CreateAsync(CreateSaleRequest request, string companyId);
-    Task<SaleResponse?> UpdateAsync(string id, UpdateSaleRequest request, string companyId);
+    Task<SaleResponse> CreateAsync(CreateSaleRequest request, string companyId, string userId);
+    Task<SaleResponse?> UpdateAsync(string id, UpdateSaleRequest request, string companyId, string userId);
     Task<InvoiceResponse?> GetInvoiceAsync(string saleId, string companyId);
 }

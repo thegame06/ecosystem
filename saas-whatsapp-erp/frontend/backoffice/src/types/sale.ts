@@ -74,6 +74,7 @@ export interface CartItem {
     unitPrice: number;
     isTaxable: boolean;
     taxRate: number; // e.g. 0.15
+    priceIncludesTax: boolean;
     // Calculados
     subtotal: number;
     taxAmount: number;

@@ -72,7 +72,10 @@ public class ProductRepository : IProductRepository
 
     public async Task<bool> DeleteAsync(string id)
     {
-        var result = await _products.DeleteOneAsync(p => p.Id == id);
-        return result.DeletedCount > 0;
+        var result = await _products.UpdateOneAsync(
+            p => p.Id == id,
+            Builders<Product>.Update.Set(p => p.IsActive, false).Set(p => p.UpdatedAt, DateTime.UtcNow)
+        );
+        return result.ModifiedCount > 0;
     }
 }

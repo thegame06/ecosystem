@@ -79,7 +79,10 @@ public class CustomerRepository : ICustomerRepository
 
     public async Task<bool> DeleteAsync(string id)
     {
-        var result = await _customers.DeleteOneAsync(c => c.Id == id);
-        return result.DeletedCount > 0;
+        var result = await _customers.UpdateOneAsync(
+            c => c.Id == id,
+            Builders<Customer>.Update.Set(c => c.IsActive, false).Set(c => c.UpdatedAt, DateTime.UtcNow)
+        );
+        return result.ModifiedCount > 0;
     }
 }

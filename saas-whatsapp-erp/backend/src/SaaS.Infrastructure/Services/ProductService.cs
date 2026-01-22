@@ -41,6 +41,7 @@ public class ProductService : IProductService
             Stock = product.StockQuantity,
             RentalPricePerDay = product.RentalPricePerDay,
             RentalPricePerHour = product.RentalPricePerHour,
+            PriceIncludesTax = product.PriceIncludesTax,
             IsActive = product.IsActive,
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt
@@ -95,7 +96,8 @@ public class ProductService : IProductService
             Unit = request.Unit,
             Discount = request.Discount,
             TrackInventory = request.TrackInventory,
-            StockQuantity = request.Stock
+            StockQuantity = request.Stock,
+            PriceIncludesTax = request.PriceIncludesTax
         };
 
         var created = await _productRepository.CreateAsync(product);
@@ -119,6 +121,7 @@ public class ProductService : IProductService
         product.Discount = request.Discount;
         product.TrackInventory = request.TrackInventory;
         product.StockQuantity = request.Stock;
+        product.PriceIncludesTax = request.PriceIncludesTax;
         product.IsActive = request.IsActive;
 
         var updated = await _productRepository.UpdateAsync(product);
@@ -152,6 +155,7 @@ public class ProductService : IProductService
             Discount = product.Discount,
             TrackInventory = product.TrackInventory,
             Stock = product.StockQuantity,
+            PriceIncludesTax = product.PriceIncludesTax,
             IsActive = product.IsActive,
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt

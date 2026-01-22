@@ -21,7 +21,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-x-hidden overflow-y-auto outline-none focus:outline-none">
+
             {/* Backdrop */}
             <div className="absolute inset-0 bg-surface-950/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
 

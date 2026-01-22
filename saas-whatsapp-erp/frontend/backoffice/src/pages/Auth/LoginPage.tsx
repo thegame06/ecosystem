@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../services/authService';
-import { Lock, Mail, ArrowRight, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Lock, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();

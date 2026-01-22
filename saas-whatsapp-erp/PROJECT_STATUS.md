@@ -1,16 +1,14 @@
 # 📊 ESTADO DEL PROYECTO SaaS WhatsApp ERP
 
-**Fecha de Actualización**: 2026-01-21 (16:00)
-**ESTADO**: 🚀 **POS COMPLETADO - LISTO PARA DEMO**
+**Fecha de Actualización**: 2026-01-21 (17:30)
+**ESTADO**: 🚀 **GESTIÓN AVANZADA Y LÓGICA TRIBUTARIA COMPLETADA**
 
 ## ✅ HITO ALCANZADO (2026-01-21)
-**POS Rápido (Crear Venta) IMPLEMENTADO**
-- Frontend: Pantalla completa de ventas
-- Backend: Integración funcional
-- Límites: HTTP 403 manejado correctamente
-- Demo: Flujo end-to-end operativo
-
-Ver: `frontend/backoffice/POS_EXECUTIVE_SUMMARY.md`
+**Gestión de Clientes/Productos y Configuración de Empresa IMPLEMENTADA**
+- Frontend: CRUD completo (Edit/Delete) para Clientes y Productos.
+- Backend: Soft Delete habilitado para Clientes y Productos.
+- Lógica Tributaria: Soporte para precios que incluyen o excluyen IVA.
+- Configuración: Nueva pantalla de ajustes para Empresa y WhatsApp.
 
 ---
 
@@ -18,45 +16,38 @@ Ver: `frontend/backoffice/POS_EXECUTIVE_SUMMARY.md`
 
 ### 🟢 Backend (SaaS.Api)
 **Tecnología**: .NET 10.0, MongoDB, Clean Architecture
-**Estado**: ~95% Core Funcional | 100% Core SaaS Features
+**Estado**: ~98% Core Funcional | 100% Core SaaS Features
 
 #### ✅ Completado
 - Infraestructura: Multi-tenant, Auth (JWT), Repositorios optimizados.
 - Controllers Core (6/6): Auth, Products, Customers, Sales, Invoices, Conversations.
-- Servicios de Negocio: Auth, Customer, Sale, Invoice, Conversation.
-- **SaaS Features**: Planes (Starter, Pro, Growth), Límites, Tracking de consumo, Enforcement de suscripciones.
+- **SaaS Features**: Planes, Límites, Tracking de consumo, Enforcement de suscripciones.
+- **Lógica Tributaria**: Integración de `PriceIncludesTax` y tasa configurable por empresa.
+- **Configuración**: Endpoint de actualización de empresa y ajustes de WhatsApp.
 
 #### ❌ Pendiente CRÍTICO (Prioridad 1)
-- **WhatsApp Integration**: Webhooks, Integración API Business, Envío real.
+- **WhatsApp Integration Real**: Integración API Business (Meta), Envío real de PDFs.
 
 ### 🟢 Frontend (Backoffice)
 **Tecnología**: React, TypeScript, Vite, Tailwind
-**Estado**: ~60% Core Funcional | ✅ POS COMPLETADO
+**Estado**: ~85% Core Funcional | ✅ CRUD COMPLETADO | ✅ CONFIGURACIÓN COMPLETADA
 
 #### ✅ Completado (2026-01-21)
-- Setup inicial y estructura de carpetas.
-- Módulo de Productos básico (Listado/Creación).
-- **✅ POS Rápido (Crear Venta)**: Pantalla completa con:
-  - Búsqueda de productos en tiempo real
-  - Selección de cliente
-  - Carrito con cálculo automático de totales
-  - Manejo de errores HTTP 403 (límites de plan)
-  - Feedback visual de éxito/error
-  - Diseño WhatsApp-First optimizado
-- **✅ Tipos TypeScript**: Alineados con backend DTOs
-- **✅ Servicio de Ventas**: Con manejo de errores específicos
+- **✅ POS Rápido**: Pantalla completa con carrito y límites de plan.
+- **✅ CRUD Completo**: Pantallas de Clientes y Productos con edición y eliminación lógica.
+- **✅ Configuración**: Pantalla de settings con pestañas para Empresa (IVA, Moneda) y WhatsApp (Meta API).
+- **✅ Lógica Tributaria**: Visualización de precios con/sin IVA e integración con settings de empresa.
+- **✅ Modal UI**: Mejorado centrado y responsividad.
 
 #### ❌ Pendiente CRÍTICO (Prioridad 2)
-- **Login/Register**: Conexión real con backend.
-- **WhatsApp Module**: Integración con conversaciones.
-- **Invoices**: Generación y envío.
+- **Login/Register**: Conexión real con backend (Auth Service).
+- **WhatsApp Module**: Integración completa con conversaciones en vivo.
+- **Invoices**: Generación real de PDF y envío automático.
 
 ---
 
 ## 📋 Plan de Acción Inmediato (War Room)
 
-1. ✅ **FRONTEND**: ~~Implementar POS (Crear Venta)~~ **COMPLETADO**
-2. **OPERATIONS/BACKEND**: Integrar WhatsApp Business API y Webhooks.
-3. **FRONTEND**: Implementar Auth y el flujo "Chat → Venta → Factura".
-
-Ver `frontend/backoffice/POS_README.md` para detalles de implementación.
+1. **BACKEND/INFRA**: Integrar generación de PDF real (QuestPDF) y conectar con Meta API.
+2. **FRONTEND**: Finalizar flujo de autenticación persistente.
+3. **DEMO FLOW**: Verificar flujo: Recibir msg -> POS -> Facturar -> WhatsApp.

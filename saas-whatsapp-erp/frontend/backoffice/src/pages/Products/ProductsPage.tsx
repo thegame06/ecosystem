@@ -13,7 +13,6 @@ const ProductsPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // Form State
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<CreateProductRequest>({
         name: '',
@@ -22,6 +21,7 @@ const ProductsPage: React.FC = () => {
         price: 0,
         costPrice: 0,
         taxRate: 0.15,
+        priceIncludesTax: false,
         imageUrl: '',
         unit: 'pza',
         discount: 0,
@@ -54,7 +54,8 @@ const ProductsPage: React.FC = () => {
             type: ProductType.Tangible,
             price: 0,
             costPrice: 0,
-            taxRate: 0.16,
+            taxRate: 0.15,
+            priceIncludesTax: false,
             imageUrl: '',
             unit: 'pza',
             discount: 0,
@@ -73,7 +74,8 @@ const ProductsPage: React.FC = () => {
             type: product.type,
             price: product.price,
             costPrice: product.costPrice || 0,
-            taxRate: product.taxRate || 0.16,
+            taxRate: product.taxRate || 0.15,
+            priceIncludesTax: product.priceIncludesTax || false,
             imageUrl: product.imageUrl || '',
             unit: product.unit || 'pza',
             discount: product.discount || 0,
@@ -84,12 +86,15 @@ const ProductsPage: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleCloseModal = () => setIsModalOpen(false);
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingId(null);
+    };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const commonData = {
+            const commonData: CreateProductRequest = {
                 ...formData,
                 price: Number(formData.price),
                 costPrice: Number(formData.costPrice),
@@ -101,7 +106,7 @@ const ProductsPage: React.FC = () => {
             if (editingId) {
                 const updateRequest: UpdateProductRequest = {
                     ...commonData,
-                    id: editingId
+                    isActive: true
                 };
                 await productService.update(editingId, updateRequest);
             } else {
@@ -113,6 +118,17 @@ const ProductsPage: React.FC = () => {
         } catch (error: any) {
             console.error('Error saving product:', error);
             setErrorMsg(error?.response?.data?.message || 'Error al guardar producto');
+        }
+    };
+
+    const handleDeleteProduct = async (id: string) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
+        try {
+            await productService.delete(id);
+            await loadProducts();
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            alert('Error al eliminar el producto');
         }
     };
 
@@ -131,7 +147,7 @@ const ProductsPage: React.FC = () => {
                     <p className="text-sm text-gray-500 mt-1">Gestiona tu catálogo de productos y servicios</p>
                 </div>
                 <div className="w-40">
-                    <Button onClick={handleOpenModal} className="flex items-center justify-center gap-2">
+                    <Button onClick={() => handleOpenModal()} className="flex items-center justify-center gap-2">
                         <Plus size={18} />
                         Nuevo
                     </Button>
@@ -183,11 +199,11 @@ const ProductsPage: React.FC = () => {
                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                                         ${product.type === ProductType.Tangible ? 'bg-blue-100 text-blue-800' :
                                             product.type === ProductType.Service ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}`}>
-                                        {product.type}
+                                        {PRODUCT_TYPE_LABELS[product.type]}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    ${product.price.toFixed(2)}
+                                    ${product.price.toFixed(2)} {product.priceIncludesTax && <span className="text-[10px] text-green-600 font-bold ml-1">IVA INC.</span>}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {product.trackInventory ? (
@@ -205,7 +221,10 @@ const ProductsPage: React.FC = () => {
                                     >
                                         <Pencil size={18} />
                                     </button>
-                                    <button className="text-red-600 hover:text-red-900">
+                                    <button
+                                        onClick={() => handleDeleteProduct(product.id)}
+                                        className="text-red-600 hover:text-red-900"
+                                    >
                                         <Trash2 size={18} />
                                     </button>
                                 </td>
@@ -269,13 +288,27 @@ const ProductsPage: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Input
-                            label="IVA (0.0 - 1.0)"
-                            type="number"
-                            step="0.01"
-                            value={formData.taxRate}
-                            onChange={(e) => setFormData({ ...formData, taxRate: parseFloat(e.target.value) })}
-                        />
+                        <div>
+                            <Input
+                                label="IVA (0.0 - 1.0)"
+                                type="number"
+                                step="0.01"
+                                value={formData.taxRate}
+                                onChange={(e) => setFormData({ ...formData, taxRate: parseFloat(e.target.value) })}
+                            />
+                            <div className="flex items-center mt-2">
+                                <input
+                                    id="price-includes-tax"
+                                    type="checkbox"
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                    checked={formData.priceIncludesTax}
+                                    onChange={(e) => setFormData({ ...formData, priceIncludesTax: e.target.checked })}
+                                />
+                                <label htmlFor="price-includes-tax" className="ml-2 block text-[10px] text-gray-700">
+                                    Precio incluye IVA
+                                </label>
+                            </div>
+                        </div>
                         <Input
                             label="Descuento (%)"
                             type="number"

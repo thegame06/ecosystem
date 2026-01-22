@@ -9,6 +9,7 @@ export interface Product {
     price: number;
     costPrice?: number;
     taxRate?: number;
+    priceIncludesTax: boolean;
     imageUrl?: string;
     unit?: string;
     discount?: number;
@@ -28,6 +29,7 @@ export interface CreateProductRequest {
     price: number;
     costPrice?: number;
     taxRate?: number;
+    priceIncludesTax: boolean;
     imageUrl?: string;
     unit?: string;
     discount?: number;

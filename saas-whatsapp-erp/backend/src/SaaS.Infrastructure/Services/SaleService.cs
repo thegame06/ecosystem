@@ -14,17 +14,20 @@ public class SaleService : ISaleService
     private readonly IProductRepository _productRepository;
     private readonly ICustomerRepository _customerRepository;
     private readonly IInvoiceRepository _invoiceRepository;
+    private readonly ICompanyRepository _companyRepository;
 
     public SaleService(
         ISaleRepository saleRepository,
         IProductRepository productRepository,
         ICustomerRepository customerRepository, 
-        IInvoiceRepository invoiceRepository)
+        IInvoiceRepository invoiceRepository,
+        ICompanyRepository companyRepository)
     {
         _saleRepository = saleRepository;
         _productRepository = productRepository;
         _customerRepository = customerRepository;
         _invoiceRepository = invoiceRepository;
+        _companyRepository = companyRepository;
     }
 
     public async Task<ResponsePagination<SaleResponse>> SearchAsync(
@@ -98,7 +101,7 @@ public class SaleService : ISaleService
         return MapToResponse(sale);
     }
 
-    public async Task<SaleResponse> CreateAsync(CreateSaleRequest request, string companyId)
+    public async Task<SaleResponse> CreateAsync(CreateSaleRequest request, string companyId, string userId)
     {
         // Validar cliente
         var customer = await _customerRepository.GetByIdAsync(request.CustomerId);
@@ -109,10 +112,14 @@ public class SaleService : ISaleService
         {
             CompanyId = companyId,
             CustomerId = request.CustomerId,
+            CreatedByUserId = userId,
             Date = DateTime.UtcNow,
             State = CommercialState.SALE_CREATED,
             Items = new List<SaleItem>()
         };
+
+        var company = await _companyRepository.GetByIdAsync(companyId);
+        var companyTaxRate = company?.TaxRate ?? 0.15m;
 
         // Procesar items
         foreach (var itemRequest in request.Items)
@@ -125,24 +132,43 @@ public class SaleService : ISaleService
             if (product.TrackInventory && product.StockQuantity < itemRequest.Quantity)
                 throw new InvalidOperationException($"Insufficient stock for product {product.Name}");
 
-            var price = itemRequest.UnitPrice ?? product.Price;
-            var taxRate = product.TaxRate ?? 0.16m; // TODO: Usar defaults de Company
+            var unitPrice = itemRequest.UnitPrice ?? product.Price;
+            var taxRate = product.TaxRate ?? companyTaxRate;
+            
+            decimal lineSubtotal, lineTaxAmount, lineTotal;
+
+            if (product.PriceIncludesTax)
+            {
+                // Precio ya incluye IVA
+                lineTotal = itemRequest.Quantity * unitPrice;
+                lineSubtotal = lineTotal / (1 + taxRate);
+                lineTaxAmount = lineTotal - lineSubtotal;
+            }
+            else
+            {
+                // Precio NO incluye IVA
+                lineSubtotal = itemRequest.Quantity * unitPrice;
+                lineTaxAmount = lineSubtotal * taxRate;
+                lineTotal = lineSubtotal + lineTaxAmount;
+            }
 
             sale.Items.Add(new SaleItem
             {
                 ProductId = product.Id,
                 ProductName = product.Name,
                 Quantity = itemRequest.Quantity,
-                UnitPrice = price,
+                UnitPrice = unitPrice,
                 TaxRate = taxRate,
-                Subtotal = itemRequest.Quantity * price
+                Subtotal = Math.Round(lineSubtotal, 2),
+                TaxAmount = Math.Round(lineTaxAmount, 2),
+                Total = Math.Round(lineTotal, 2)
             });
         }
 
         // Calcular totales
         sale.Subtotal = sale.Items.Sum(i => i.Subtotal);
-        sale.TaxAmount = sale.Items.Sum(i => i.Subtotal * i.TaxRate);
-        sale.Total = sale.Subtotal + sale.TaxAmount;
+        sale.TaxAmount = sale.Items.Sum(i => i.TaxAmount);
+        sale.Total = sale.Items.Sum(i => i.Total);
 
         // Generar número simple (TODO: Mejorar generador de secuencias)
         sale.Number = "S-" + DateTime.UtcNow.Ticks.ToString().Substring(10); 
@@ -159,7 +185,7 @@ public class SaleService : ISaleService
         return MapToResponse(created);
     }
 
-    public async Task<SaleResponse?> UpdateAsync(string id, UpdateSaleRequest request, string companyId)
+    public async Task<SaleResponse?> UpdateAsync(string id, UpdateSaleRequest request, string companyId, string userId)
     {
         var sale = await _saleRepository.GetByIdAsync(id);
         if (sale == null || sale.CompanyId != companyId)
@@ -170,7 +196,9 @@ public class SaleService : ISaleService
 
         if (request.Items != null)
         {
-             // Logica similar a Create para recalcular
+             var company = await _companyRepository.GetByIdAsync(companyId);
+             var companyTaxRate = company?.TaxRate ?? 0.15m;
+             
              sale.Items.Clear();
              foreach(var itemRequest in request.Items)
              {
@@ -178,22 +206,39 @@ public class SaleService : ISaleService
                  if (product == null || product.CompanyId != companyId)
                      throw new ArgumentException($"Invalid product {itemRequest.ProductId}");
                  
-                 var price = itemRequest.UnitPrice ?? product.Price;
-                 var taxRate = product.TaxRate ?? 0;
+                 var unitPrice = itemRequest.UnitPrice ?? product.Price;
+                 var taxRate = product.TaxRate ?? companyTaxRate;
+
+                 decimal lineSubtotal, lineTaxAmount, lineTotal;
+
+                 if (product.PriceIncludesTax)
+                 {
+                     lineTotal = itemRequest.Quantity * unitPrice;
+                     lineSubtotal = lineTotal / (1 + taxRate);
+                     lineTaxAmount = lineTotal - lineSubtotal;
+                 }
+                 else
+                 {
+                     lineSubtotal = itemRequest.Quantity * unitPrice;
+                     lineTaxAmount = lineSubtotal * taxRate;
+                     lineTotal = lineSubtotal + lineTaxAmount;
+                 }
 
                  sale.Items.Add(new SaleItem
                  {
                      ProductId = product.Id,
                      ProductName = product.Name,
                      Quantity = itemRequest.Quantity,
-                     UnitPrice = price,
+                     UnitPrice = unitPrice,
                      TaxRate = taxRate,
-                     Subtotal = itemRequest.Quantity * price
+                     Subtotal = Math.Round(lineSubtotal, 2),
+                     TaxAmount = Math.Round(lineTaxAmount, 2),
+                     Total = Math.Round(lineTotal, 2)
                  });
              }
              sale.Subtotal = sale.Items.Sum(i => i.Subtotal);
-            sale.TaxAmount = sale.Items.Sum(i => i.Subtotal * i.TaxRate);
-            sale.Total = sale.Subtotal + sale.TaxAmount;
+             sale.TaxAmount = sale.Items.Sum(i => i.TaxAmount);
+             sale.Total = sale.Items.Sum(i => i.Total);
         }
 
         // TODO Notes...

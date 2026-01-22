@@ -22,6 +22,9 @@ public class Company
     [BsonElement("isTaxEnabled")]
     public bool IsTaxEnabled { get; set; } = true;
 
+    [BsonElement("currencySymbol")]
+    public string CurrencySymbol { get; set; } = "$";
+
     [BsonElement("invoiceSequence")]
     public int InvoiceSequence { get; set; } = 1;
 
@@ -33,6 +36,9 @@ public class Company
 
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [BsonElement("updatedAt")]
+    public DateTime? UpdatedAt { get; set; }
 
     [BsonElement("isActive")]
     public bool IsActive { get; set; } = true;

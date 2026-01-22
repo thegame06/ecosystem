@@ -20,6 +20,7 @@ interface CustomerFormData {
 
 const CustomersPage: React.FC = () => {
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -52,30 +53,47 @@ const CustomersPage: React.FC = () => {
         }
     };
 
-    const handleOpenModal = () => {
-        setFormData({
-            firstName: '',
-            lastName: '',
-            phone: '',
-            email: '',
-            address: '',
-            city: '',
-            notes: '',
-            whatsappConsent: true
-        });
+    const handleOpenModal = (customer?: Customer) => {
+        if (customer && customer.id) {
+            setEditingCustomer(customer);
+            const nameParts = (customer.name || '').split(' ');
+            setFormData({
+                firstName: nameParts[0] || '',
+                lastName: nameParts.slice(1).join(' ') || '',
+                phone: customer.phone || '',
+                email: customer.email || '',
+                address: customer.address || '',
+                city: customer.city || '',
+                notes: '',
+                whatsappConsent: customer.whatsappConsent ?? true
+            });
+        } else {
+            setEditingCustomer(null);
+            setFormData({
+                firstName: '',
+                lastName: '',
+                phone: '',
+                email: '',
+                address: '',
+                city: '',
+                notes: '',
+                whatsappConsent: true
+            });
+        }
         setIsModalOpen(true);
     };
 
-    const handleCloseModal = () => setIsModalOpen(false);
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingCustomer(null);
+    };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            // Combine names, trim extra spaces
             const fullName = `${formData.firstName} ${formData.lastName}`.trim();
-            // Combine address and city if relevant, or just rely on address
-            const fullAddress = formData.city 
-                ? `${formData.address}${formData.address ? ', ' : ''}${formData.city}` 
+            const fullAddress = formData.city
+                ? `${formData.address}${formData.address ? ', ' : ''}${formData.city}`
                 : formData.address;
 
             const request: CreateCustomerRequest = {
@@ -86,33 +104,47 @@ const CustomersPage: React.FC = () => {
                 whatsappConsent: formData.whatsappConsent
             };
 
-            await customerService.create(request);
+            if (editingCustomer) {
+                await customerService.update(editingCustomer.id, request);
+            } else {
+                await customerService.create(request);
+            }
+
             await loadCustomers();
             handleCloseModal();
         } catch (error) {
-            console.error('Error creating customer:', error);
+            console.error('Error saving customer:', error);
             alert('Error al guardar el cliente');
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este cliente?')) return;
+        try {
+            await customerService.delete(id);
+            await loadCustomers();
+        } catch (error) {
+            console.error('Error deleting customer:', error);
+            alert('Error al eliminar el cliente');
         }
     };
 
     const filteredCustomers = customers.filter(c => {
         const fullName = c.name || `${c.firstName || ''} ${c.lastName || ''}`;
         return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.phone.includes(searchTerm) ||
-        (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()));
+            c.phone.includes(searchTerm) ||
+            (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()));
     });
 
-    // Helper to safely get initials
     const getInitials = (c: Customer) => {
         if (c.name) {
-             const parts = c.name.split(' ');
-             if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-             return c.name.substring(0, 2).toUpperCase();
+            const parts = c.name.split(' ').filter(p => p.length > 0);
+            if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+            return c.name.substring(0, 2).toUpperCase();
         }
         return `${c.firstName?.[0] || ''}${c.lastName?.[0] || ''}`.toUpperCase() || '??';
     };
 
-    // Helper to safely get display name
     const getDisplayName = (c: Customer) => {
         return c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim();
     };
@@ -128,7 +160,7 @@ const CustomersPage: React.FC = () => {
                     <p className="text-sm text-gray-500 mt-1">Gestiona tu base de datos de clientes y contactos</p>
                 </div>
                 <div className="w-40">
-                    <Button onClick={handleOpenModal} className="flex items-center justify-center gap-2">
+                    <Button onClick={() => handleOpenModal()} className="flex items-center justify-center gap-2">
                         <Plus size={18} />
                         Nuevo
                     </Button>
@@ -167,7 +199,9 @@ const CustomersPage: React.FC = () => {
                                     <Phone size={14} className="mr-1.5 flex-shrink-0" />
                                     {customer.phone}
                                     {customer.whatsappConsent && (
-                                        <MessageCircle size={14} className="ml-2 text-green-500" title="WhatsApp Consent" />
+                                        <div className="ml-2 flex items-center text-green-600 tooltip" title="WhatsApp Consentimiento">
+                                            <MessageCircle size={14} className="text-green-500" />
+                                        </div>
                                     )}
                                 </div>
                                 {customer.email && (
@@ -186,10 +220,16 @@ const CustomersPage: React.FC = () => {
                                 )}
                             </div>
                             <div className="flex flex-col space-y-2">
-                                <button className="text-gray-400 hover:text-blue-600">
+                                <button
+                                    onClick={() => handleOpenModal(customer)}
+                                    className="text-gray-400 hover:text-blue-600 transition-colors"
+                                >
                                     <Pencil size={18} />
                                 </button>
-                                <button className="text-gray-400 hover:text-red-600">
+                                <button
+                                    onClick={() => handleDelete(customer.id)}
+                                    className="text-gray-400 hover:text-red-600 transition-colors"
+                                >
                                     <Trash2 size={18} />
                                 </button>
                             </div>
@@ -200,7 +240,7 @@ const CustomersPage: React.FC = () => {
 
             {isLoading && (
                 <div className="text-center py-12">
-                     <p className="text-gray-500">Cargando clientes...</p>
+                    <p className="text-gray-500">Cargando clientes...</p>
                 </div>
             )}
 
@@ -215,26 +255,26 @@ const CustomersPage: React.FC = () => {
             <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Nuevo Cliente">
                 <form onSubmit={handleSave} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                        <Input 
-                            label="Nombres" 
-                            required 
+                        <Input
+                            label="Nombres"
+                            required
                             value={formData.firstName}
-                            onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                         />
-                        <Input 
-                            label="Apellidos" 
-                            required 
+                        <Input
+                            label="Apellidos"
+                            required
                             value={formData.lastName}
-                            onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                         />
                     </div>
-                    
-                    <Input 
-                        label="Teléfono (WhatsApp)" 
-                        required 
+
+                    <Input
+                        label="Teléfono (WhatsApp)"
+                        required
                         type="tel"
                         value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     />
 
                     <div className="flex items-center my-2">
@@ -243,24 +283,24 @@ const CustomersPage: React.FC = () => {
                             type="checkbox"
                             className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                             checked={formData.whatsappConsent}
-                            onChange={(e) => setFormData({...formData, whatsappConsent: e.target.checked})}
+                            onChange={(e) => setFormData({ ...formData, whatsappConsent: e.target.checked })}
                         />
                         <label htmlFor="whatsapp-consent" className="ml-2 block text-sm text-gray-900">
                             Tiene consentimiento para recibir mensajes de WhatsApp
                         </label>
                     </div>
 
-                    <Input 
-                        label="Email (Opcional)" 
-                        type="email" 
+                    <Input
+                        label="Email (Opcional)"
+                        type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
 
-                    <Input 
-                        label="Ciudad" 
+                    <Input
+                        label="Ciudad"
                         value={formData.city}
-                        onChange={(e) => setFormData({...formData, city: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     />
 
                     <div className="mb-4">
@@ -269,7 +309,7 @@ const CustomersPage: React.FC = () => {
                             className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             rows={3}
                             value={formData.address}
-                            onChange={(e) => setFormData({...formData, address: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         />
                     </div>
 
