@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { companyService, UsageCounters, CompanyInfo } from '../../services/companyService';
 import { Zap, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { PlanType, PLAN_TYPE_LABELS } from '../../types/enums';
 
 const PlanUsageSidebar: React.FC = () => {
     const [usage, setUsage] = useState<UsageCounters | null>(null);
@@ -26,9 +27,9 @@ const PlanUsageSidebar: React.FC = () => {
     if (!usage || !company) return null;
 
     const limits = {
-        Starter: { messages: 300, conversations: 150, invoices: 300 },
-        Pro: { messages: 1000, conversations: 700, invoices: 1000 },
-        Growth: { messages: 3000, conversations: 10000, invoices: 10000 }
+        [PlanType.Starter]: { messages: 300, conversations: 150, invoices: 300 },
+        [PlanType.Pro]: { messages: 1000, conversations: 700, invoices: 1000 },
+        [PlanType.Growth]: { messages: 3000, conversations: 10000, invoices: 10000 }
     }[company.plan] || { messages: 0, conversations: 0, invoices: 0 };
 
     const getProgress = (used: number, limit: number) => Math.min(100, (used / limit) * 100);
@@ -42,10 +43,10 @@ const PlanUsageSidebar: React.FC = () => {
                     </div>
                     <div>
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Tu Plan</h4>
-                        <p className="text-sm font-black text-white">{company.plan}</p>
+                        <p className="text-sm font-black text-white">{PLAN_TYPE_LABELS[company.plan]}</p>
                     </div>
                 </div>
-                {company.plan === 'Starter' && (
+                {company.plan === PlanType.Starter && (
                     <span className="text-[9px] font-black bg-primary-600 text-white px-2 py-0.5 rounded-full animate-bounce">UPGRADE</span>
                 )}
             </div>

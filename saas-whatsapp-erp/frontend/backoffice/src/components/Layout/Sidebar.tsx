@@ -17,7 +17,8 @@ import PlanUsageSidebar from './PlanUsageSidebar';
 const Sidebar: React.FC = () => {
   const navItems = [
     { name: 'WhatsApp', path: '/whatsapp', icon: MessageSquare },
-    { name: 'Ventas / POS', path: '/sales', icon: ShoppingCart },
+    { name: 'POS (Nueva Venta)', path: '/pos', icon: ShoppingCart },
+    { name: 'Ventas (Historial)', path: '/sales', icon: FileText },
     { name: 'Clientes', path: '/customers', icon: Users },
     { name: 'Facturas', path: '/invoices', icon: FileText },
     { name: 'Productos', path: '/products', icon: Package },

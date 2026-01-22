@@ -7,7 +7,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, className = '', ...props }, ref) => {
   return (
-    <div className="mb-4">
+    <div className="mb-3">
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}
@@ -15,9 +15,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, classNam
       )}
       <input
         ref={ref}
-        className={`appearance-none block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-          error ? 'border-red-300' : 'border-gray-300'
-        } ${className}`}
+        className={`appearance-none block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${error ? 'border-red-300' : 'border-gray-300'
+          } ${className}`}
         {...props}
       />
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}

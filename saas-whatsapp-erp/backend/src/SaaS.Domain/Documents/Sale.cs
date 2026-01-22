@@ -100,6 +100,9 @@ public class Sale
     [BsonRepresentation(BsonType.String)]
     public CommercialState State { get; set; } = CommercialState.SALE_CREATED;
 
+    [BsonElement("paymentMethod")]
+    public string? PaymentMethod { get; set; }
+
     [BsonElement("notes")]
     public string? Notes { get; set; }
 

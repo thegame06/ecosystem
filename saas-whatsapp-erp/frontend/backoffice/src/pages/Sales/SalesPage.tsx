@@ -45,6 +45,7 @@ const SalesPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<SaleError | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Transferencia'>('Efectivo');
 
     useEffect(() => {
         loadProducts();
@@ -183,6 +184,7 @@ const SalesPage: React.FC = () => {
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
                 })),
+                paymentMethod: paymentMethod,
             };
             await saleService.create(request);
             setSuccessMessage(`¡Venta creada exitosamente!`);
@@ -224,7 +226,7 @@ const SalesPage: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start content-start">
                     {filteredProducts.map(product => (
                         <div key={product.id} onClick={() => addToCart(product)} className="bg-white p-4 rounded-2xl border-2 border-slate-100 hover:border-primary-500 hover:shadow-xl transition-all cursor-pointer group">
                             <div className="w-full aspect-square bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 group-hover:text-primary-500 mb-3">
@@ -322,6 +324,25 @@ const SalesPage: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* Forma de Pago */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Forma de Pago</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={() => setPaymentMethod('Efectivo')}
+                                className={`py-3 px-4 rounded-xl text-sm font-bold border-2 transition-all ${paymentMethod === 'Efectivo' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+                            >
+                                💵 Efectivo
+                            </button>
+                            <button
+                                onClick={() => setPaymentMethod('Transferencia')}
+                                className={`py-3 px-4 rounded-xl text-sm font-bold border-2 transition-all ${paymentMethod === 'Transferencia' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+                            >
+                                🏦 Transferencia
+                            </button>
+                        </div>
+                    </div>
 
                     {successMessage && <div className="p-4 rounded-xl border-2 bg-green-50 border-green-200 text-green-900 flex gap-3"><CheckCircle size={20} className="shrink-0" /> <div className="text-sm font-black">{successMessage}</div></div>}
 

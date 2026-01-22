@@ -22,5 +22,7 @@ public class SaleResponse
     public decimal TaxAmount { get; set; }
     public decimal Total { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string? PaymentMethod { get; set; }
+    public DateTime CreatedAt { get; set; }
     public List<SaleItemResponse> Items { get; set; } = new();
 }

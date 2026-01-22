@@ -49,6 +49,8 @@ public class SaleService : ISaleService
             TaxAmount = sale.TaxAmount,
             Total = sale.Total,
             Status = sale.State.ToString(),
+            PaymentMethod = sale.PaymentMethod,
+            CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,
@@ -115,6 +117,7 @@ public class SaleService : ISaleService
             CreatedByUserId = userId,
             Date = DateTime.UtcNow,
             State = CommercialState.SALE_CREATED,
+            PaymentMethod = request.PaymentMethod,
             Items = new List<SaleItem>()
         };
 
@@ -294,6 +297,8 @@ public class SaleService : ISaleService
             TaxAmount = sale.TaxAmount,
             Total = sale.Total,
             Status = sale.State.ToString(),
+            PaymentMethod = sale.PaymentMethod,
+            CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,

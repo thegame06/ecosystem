@@ -21,4 +21,6 @@ public class CreateSaleRequest
     [Required]
     [MinLength(1)]
     public List<CreateSaleItemRequest> Items { get; set; } = new();
+
+    public string? PaymentMethod { get; set; }
 }

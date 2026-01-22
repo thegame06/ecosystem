@@ -151,10 +151,20 @@ const SettingsPage: React.FC = () => {
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3">
                             <AlertCircle className="text-blue-600 shrink-0" size={20} />
                             <div>
-                                <h4 className="text-sm font-bold text-blue-900">Configuración Meta Business</h4>
+                                <h4 className="text-sm font-bold text-blue-900">Conexión WhatsApp Cloud API (Oficial)</h4>
                                 <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                                    Ingresa las credenciales de tu aplicación en Meta for Developers para habilitar el envío y recepción de mensajes.
+                                    Esta integración conecta tu empresa directamente con los servidores de Meta.
+                                    <br />
+                                    <strong>⚠️ IMPORTANTE:</strong> Requiere un número telefónico dedicado. Si conectas un número que ya usas en tu celular, <strong>la App de WhatsApp dejará de funcionar en tu dispositivo</strong>.
                                 </p>
+                                <a 
+                                    href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-xs font-semibold text-blue-800 hover:text-blue-950 underline mt-3 inline-block"
+                                >
+                                    📚 ¿Cómo obtener mis credenciales? (Guía Oficial)
+                                </a>
                             </div>
                         </div>
 

@@ -320,36 +320,46 @@ const ProductsPage: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Input
-                                label="Unidad"
-                                list="unit-options"
-                                value={formData.unit || ''}
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
+                            <select
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                value={formData.unit || 'Unidad'}
                                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                                placeholder="Seleccione o escriba..."
-                            />
-                            <datalist id="unit-options">
-                                <option value="pza">Pieza</option>
-                                <option value="kg">Kilogramo</option>
-                                <option value="mt">Metro</option>
-                                <option value="lt">Litro</option>
-                                <option value="cja">Caja</option>
-                                <option value="hora">Hora</option>
-                                <option value="svc">Servicio</option>
-                            </datalist>
+                            >
+                                <option value="Unidad">Unidad</option>
+                                <option value="Hora">Hora</option>
+                                <option value="Día">Día</option>
+                                <option value="Kilogramo">Kilogramo</option>
+                                <option value="Libra">Libra</option>
+                                <option value="Quintal">Quintal</option>
+                                <option value="Caja">Caja</option>
+                                <option value="Svc">Servicio</option>
+                                <option value="Otro">Otro (Personalizado)</option>
+                            </select>
                         </div>
                         <div>
-                            <Input
-                                label="Imagen URL"
-                                value={formData.imageUrl || ''}
-                                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                            />
-                            {formData.imageUrl && (
-                                <img
-                                    src={formData.imageUrl}
-                                    alt="Preview"
-                                    className="mt-2 h-20 w-20 object-cover rounded border border-gray-200"
-                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                            {formData.unit === 'Otro' ? (
+                                <Input
+                                    label="Especifique Unidad"
+                                    placeholder="Ej: Metro, Galón..."
+                                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                                 />
+                            ) : (
+                                <>
+                                    <Input
+                                        label="Imagen URL"
+                                        value={formData.imageUrl || ''}
+                                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                                    />
+                                    {formData.imageUrl && (
+                                        <img
+                                            src={formData.imageUrl}
+                                            alt="Preview"
+                                            className="mt-2 h-20 w-20 object-cover rounded border border-gray-200"
+                                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                                        />
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

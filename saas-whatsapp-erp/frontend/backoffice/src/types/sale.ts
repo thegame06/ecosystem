@@ -21,6 +21,7 @@ export interface CreateSaleItemRequest {
 export interface CreateSaleRequest {
     customerId: string;
     items: CreateSaleItemRequest[];
+    paymentMethod?: string;
 }
 
 // ============================================
