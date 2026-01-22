@@ -70,8 +70,8 @@ const SettingsPage: React.FC = () => {
                 <button
                     onClick={() => setActiveTab('company')}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'company'
-                            ? 'bg-white text-primary-600 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-white text-primary-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     <Building2 size={18} />
@@ -80,8 +80,8 @@ const SettingsPage: React.FC = () => {
                 <button
                     onClick={() => setActiveTab('whatsapp')}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'whatsapp'
-                            ? 'bg-white text-primary-600 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-white text-primary-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     <MessageSquare size={18} />
@@ -157,10 +157,10 @@ const SettingsPage: React.FC = () => {
                                     <br />
                                     <strong>⚠️ IMPORTANTE:</strong> Requiere un número telefónico dedicado. Si conectas un número que ya usas en tu celular, <strong>la App de WhatsApp dejará de funcionar en tu dispositivo</strong>.
                                 </p>
-                                <a 
-                                    href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
+                                <a
+                                    href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="text-xs font-semibold text-blue-800 hover:text-blue-950 underline mt-3 inline-block"
                                 >
                                     📚 ¿Cómo obtener mis credenciales? (Guía Oficial)
@@ -204,6 +204,27 @@ const SettingsPage: React.FC = () => {
                                     whatsAppSettings: { ...company.whatsAppSettings, verifyToken: e.target.value }
                                 })}
                             />
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">Estado de WhatsApp</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        id="whatsapp-active"
+                                        type="checkbox"
+                                        className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                        checked={company.whatsAppSettings?.isActive || false}
+                                        onChange={(e) => setCompany({
+                                            ...company,
+                                            whatsAppSettings: { ...company.whatsAppSettings, isActive: e.target.checked }
+                                        })}
+                                    />
+                                    <label htmlFor="whatsapp-active" className="text-sm font-medium text-gray-700">
+                                        WhatsApp Activo
+                                    </label>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Activa esta opción solo cuando hayas configurado correctamente todas las credenciales
+                                </p>
+                            </div>
                         </div>
                     </div>
                 )}

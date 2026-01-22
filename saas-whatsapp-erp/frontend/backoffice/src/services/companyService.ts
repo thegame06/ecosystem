@@ -13,6 +13,7 @@ export interface WhatsAppSettings {
     accessToken?: string;
     verifyToken?: string;
     businessAccountId?: string;
+    isActive?: boolean;
 }
 
 export interface CompanyInfo {
@@ -31,4 +32,9 @@ export const companyService = {
     updateMe: (data: Partial<CompanyInfo>) => api.put<CompanyInfo>('/companies/me', data),
     getUsage: () => api.get<UsageCounters>('/companies/usage'),
     getLimits: () => api.get<any>('/companies/limits'),
+
+    // WhatsApp Settings específicos
+    getWhatsAppSettings: () => api.get<WhatsAppSettings>('/companies/whatsapp-settings'),
+    createWhatsAppSettings: (data: WhatsAppSettings) => api.post<WhatsAppSettings>('/companies/whatsapp-settings', data),
+    updateWhatsAppSettings: (data: WhatsAppSettings) => api.put<WhatsAppSettings>('/companies/whatsapp-settings', data),
 };

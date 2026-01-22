@@ -93,4 +93,88 @@ public class CompaniesController : ControllerBase
         await _companyRepository.UpdateAsync(existing);
         return Ok(existing);
     }
+
+    /// <summary>
+    /// GET /api/companies/whatsapp-settings
+    /// Obtiene la configuración de WhatsApp de la empresa
+    /// </summary>
+    [HttpGet("whatsapp-settings")]
+    public async Task<ActionResult<WhatsAppSettings>> GetWhatsAppSettings()
+    {
+        var company = await _companyRepository.GetByIdAsync(GetCompanyId());
+        if (company == null) return NotFound();
+
+        if (company.WhatsAppSettings == null)
+        {
+            return NotFound(new { message = "WhatsApp settings not configured" });
+        }
+
+        return Ok(company.WhatsAppSettings);
+    }
+
+    /// <summary>
+    /// POST /api/companies/whatsapp-settings
+    /// Crea la configuración inicial de WhatsApp
+    /// </summary>
+    [HttpPost("whatsapp-settings")]
+    public async Task<ActionResult> CreateWhatsAppSettings([FromBody] WhatsAppSettings settings)
+    {
+        var company = await _companyRepository.GetByIdAsync(GetCompanyId());
+        if (company == null) return NotFound();
+
+        // Validaciones
+        if (string.IsNullOrWhiteSpace(settings.PhoneNumberId))
+            return BadRequest(new { message = "PhoneNumberId is required" });
+
+        if (string.IsNullOrWhiteSpace(settings.AccessToken))
+            return BadRequest(new { message = "AccessToken is required" });
+
+        // Solo permitir un settings activo por empresa
+        if (company.WhatsAppSettings != null)
+        {
+            return BadRequest(new { message = "WhatsApp settings already exist. Use PUT to update." });
+        }
+
+        settings.CreatedAt = DateTime.UtcNow;
+        settings.UpdatedAt = DateTime.UtcNow;
+
+        company.WhatsAppSettings = settings;
+        company.UpdatedAt = DateTime.UtcNow;
+
+        await _companyRepository.UpdateAsync(company);
+        return Ok(company.WhatsAppSettings);
+    }
+
+    /// <summary>
+    /// PUT /api/companies/whatsapp-settings
+    /// Actualiza la configuración de WhatsApp existente
+    /// </summary>
+    [HttpPut("whatsapp-settings")]
+    public async Task<ActionResult> UpdateWhatsAppSettings([FromBody] WhatsAppSettings settings)
+    {
+        var company = await _companyRepository.GetByIdAsync(GetCompanyId());
+        if (company == null) return NotFound();
+
+        if (company.WhatsAppSettings == null)
+        {
+            return NotFound(new { message = "WhatsApp settings not found. Use POST to create." });
+        }
+
+        // Validaciones
+        if (string.IsNullOrWhiteSpace(settings.PhoneNumberId))
+            return BadRequest(new { message = "PhoneNumberId is required" });
+
+        if (string.IsNullOrWhiteSpace(settings.AccessToken))
+            return BadRequest(new { message = "AccessToken is required" });
+
+        // Mantener fecha de creación original
+        settings.CreatedAt = company.WhatsAppSettings.CreatedAt;
+        settings.UpdatedAt = DateTime.UtcNow;
+
+        company.WhatsAppSettings = settings;
+        company.UpdatedAt = DateTime.UtcNow;
+
+        await _companyRepository.UpdateAsync(company);
+        return Ok(company.WhatsAppSettings);
+    }
 }

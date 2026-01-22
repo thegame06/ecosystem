@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using SaaS.Application.DTOs.WhatsApp; // New DTO namespace
+using SaaS.Application.DTOs.WhatsApp;
 using SaaS.Application.Interfaces;
 using SaaS.Domain.Enums;
 
@@ -11,70 +11,135 @@ public class WhatsAppWebhooksController : ControllerBase
 {
     private readonly IConversationService _conversationService;
     private readonly IPlanService _planService;
-    private readonly ICompanyRepository _companyRepository; // Inject CompanyRepository
+    private readonly ICompanyRepository _companyRepository;
+    private readonly ILogger<WhatsAppWebhooksController> _logger;
 
-    public WhatsAppWebhooksController(IConversationService conversationService, IPlanService planService, ICompanyRepository companyRepository)
+    public WhatsAppWebhooksController(
+        IConversationService conversationService, 
+        IPlanService planService, 
+        ICompanyRepository companyRepository,
+        ILogger<WhatsAppWebhooksController> logger)
     {
         _conversationService = conversationService;
         _planService = planService;
         _companyRepository = companyRepository;
+        _logger = logger;
     }
 
     /// <summary>
-    /// Recibe mensajes de WhatsApp (Oficial API)
-    /// </summary>
-    [HttpPost("{companyId}")]
-    public async Task<IActionResult> ReceiveMessage(string companyId, [FromBody] WhatsAppWebhookPayload payload)
-    {
-        try 
-        {
-            var entry = payload.Entry?.FirstOrDefault();
-            var change = entry?.Changes?.FirstOrDefault();
-            var value = change?.Value;
-            var message = value?.Messages?.FirstOrDefault();
-
-            if (message != null && message.Type == "text" && message.Text != null)
-            {
-                 // Confirmar que el mensaje es para esta compañia (Opcional por seguridad)
-                 // var phoneNumberId = value.Metadata.PhoneNumberId;
-                 
-                 await _conversationService.HandleIncomingMessageAsync(companyId, message.From, message.Text.Body);
-            }
-            
-            return Ok();
-        }
-        catch (Exception ex)
-        {
-            // Log error
-            return Ok(); // Siempre retornar Ok a Meta para evitar retries infinitos
-        }
-    }
-
-    /// <summary>
-    /// Verificación de webhook (Requerido por Meta/Facebook)
+    /// GET /api/webhooks/whatsapp/{companyId}
+    /// Verificación de webhook (Requerido por Meta)
     /// </summary>
     [HttpGet("{companyId}")]
-    public async Task<IActionResult> VerifyWebhook(string companyId,
-                                     [FromQuery(Name = "hub.mode")] string mode,
-                                     [FromQuery(Name = "hub.verify_token")] string token,
-                                     [FromQuery(Name = "hub.challenge")] string challenge)
+    public async Task<IActionResult> VerifyWebhook(
+        string companyId,
+        [FromQuery(Name = "hub.mode")] string mode,
+        [FromQuery(Name = "hub.verify_token")] string token,
+        [FromQuery(Name = "hub.challenge")] string challenge)
     {
+        _logger.LogInformation("[Webhook] Verification request received for company {CompanyId}", companyId);
+        _logger.LogInformation("[Webhook] Mode: {Mode}, Token: {Token}, Challenge: {Challenge}", mode, token?.Substring(0, Math.Min(10, token?.Length ?? 0)), challenge);
+
         if (string.IsNullOrEmpty(mode) || string.IsNullOrEmpty(token))
         {
-            return BadRequest("Missing params");
+            _logger.LogWarning("[Webhook] Missing required parameters");
+            return BadRequest(new { error = "Missing hub.mode or hub.verify_token" });
         }
 
         var company = await _companyRepository.GetByIdAsync(companyId);
-        if (company == null || company.WhatsAppSettings == null)
+        if (company == null)
         {
-            return NotFound("Company or WhatsApp settings not found");
+            _logger.LogWarning("[Webhook] Company {CompanyId} not found", companyId);
+            return NotFound(new { error = "Company not found" });
+        }
+
+        if (company.WhatsAppSettings == null)
+        {
+            _logger.LogWarning("[Webhook] WhatsApp settings not configured for company {CompanyId}", companyId);
+            return NotFound(new { error = "WhatsApp settings not configured" });
+        }
+
+        if (!company.WhatsAppSettings.IsActive)
+        {
+            _logger.LogWarning("[Webhook] WhatsApp is not active for company {CompanyId}", companyId);
+            return StatusCode(403, new { error = "WhatsApp integration is not active" });
         }
 
         if (mode == "subscribe" && token == company.WhatsAppSettings.VerifyToken)
         {
-            return Ok(int.Parse(challenge)); // Meta espera el entero challenge (o string)
+            _logger.LogInformation("[Webhook] ✅ Verification successful for company {CompanyId}", companyId);
+            return Content(challenge); // Meta expects the challenge as plain text
         }
-        
-        return StatusCode(403);
+
+        _logger.LogWarning("[Webhook] ❌ Verification failed - Invalid token for company {CompanyId}", companyId);
+        return StatusCode(403, new { error = "Invalid verify token" });
+    }
+
+    /// <summary>
+    /// POST /api/webhooks/whatsapp/{companyId}
+    /// Recibe mensajes de WhatsApp (Meta Cloud API)
+    /// </summary>
+    [HttpPost("{companyId}")]
+    public async Task<IActionResult> ReceiveMessage(string companyId, [FromBody] WhatsAppWebhookPayload payload)
+    {
+        _logger.LogInformation("[Webhook] Message received for company {CompanyId}", companyId);
+
+        try
+        {
+            if (payload?.Entry == null || !payload.Entry.Any())
+            {
+                _logger.LogWarning("[Webhook] Empty payload received");
+                return Ok(); // Always return 200 to Meta
+            }
+
+            var entry = payload.Entry.FirstOrDefault();
+            var change = entry?.Changes?.FirstOrDefault();
+            var value = change?.Value;
+            var message = value?.Messages?.FirstOrDefault();
+
+            if (message == null)
+            {
+                _logger.LogInformation("[Webhook] No message in payload (might be status update)");
+                return Ok();
+            }
+
+            _logger.LogInformation("[Webhook] Message type: {Type}, From: {From}", message.Type, message.From);
+
+            if (message.Type == "text" && message.Text != null)
+            {
+                var phoneNumberId = value?.Metadata?.PhoneNumberId;
+                _logger.LogInformation("[Webhook] Text message received from {From}: {Body}", message.From, message.Text.Body);
+
+                // Validate company WhatsApp settings
+                var company = await _companyRepository.GetByIdAsync(companyId);
+                if (company?.WhatsAppSettings == null || !company.WhatsAppSettings.IsActive)
+                {
+                    _logger.LogWarning("[Webhook] WhatsApp not active for company {CompanyId}", companyId);
+                    return Ok(); // Still return 200 to avoid Meta retries
+                }
+
+                // Validate phone number ID matches
+                if (!string.IsNullOrEmpty(phoneNumberId) && phoneNumberId != company.WhatsAppSettings.PhoneNumberId)
+                {
+                    _logger.LogWarning("[Webhook] Phone number ID mismatch. Expected: {Expected}, Received: {Received}", 
+                        company.WhatsAppSettings.PhoneNumberId, phoneNumberId);
+                    return Ok();
+                }
+
+                await _conversationService.HandleIncomingMessageAsync(companyId, message.From, message.Text.Body);
+                _logger.LogInformation("[Webhook] ✅ Message processed successfully");
+            }
+            else
+            {
+                _logger.LogInformation("[Webhook] Non-text message type: {Type}", message.Type);
+            }
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Webhook] ❌ Error processing message for company {CompanyId}", companyId);
+            return Ok(); // Always return 200 to Meta to avoid infinite retries
+        }
     }
 }

@@ -60,4 +60,13 @@ public class WhatsAppSettings
 
     [BsonElement("verifyToken")]
     public string VerifyToken { get; set; } = "saas-verify-token";
+
+    [BsonElement("isActive")]
+    public bool IsActive { get; set; } = true;
+
+    [BsonElement("createdAt")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [BsonElement("updatedAt")]
+    public DateTime? UpdatedAt { get; set; }
 }
