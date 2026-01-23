@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle, Package, User, DollarSign, CreditCard } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle, Package, User, DollarSign, CreditCard, ArrowRightLeft } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { Product } from '../../types/product';
 import { productService } from '../../services/productService';
 import { saleService } from '../../services/saleService';
 import { companyService, CompanyInfo } from '../../services/companyService';
 import { CreateSaleRequest, CartItem } from '../../types/sale';
-import { PaymentMethod } from '../../types/enums';
+import { PaymentMethod, DiscountType } from '../../types/enums';
 
 interface POSModalProps {
     isOpen: boolean;
     onClose: () => void;
     customerId: string;
     customerName: string;
+    editSaleId?: string; // Nuevo prop para edición
+    channel?: string; // WhatsApp | POS | Web
     onSuccess: (saleId: string) => void;
 }
 
-const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, customerName, onSuccess }) => {
+const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, customerName, editSaleId, channel, onSuccess }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [search, setSearch] = useState('');
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -25,14 +27,63 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.Cash);
     const [applyTax, setApplyTax] = useState<boolean>(true);
-    const [globalDiscount, setGlobalDiscount] = useState<{ type: 'Fixed' | 'Percentage', value: number } | null>(null);
+    const [globalDiscount, setGlobalDiscount] = useState<{ type: DiscountType, value: number } | null>(null);
 
     useEffect(() => {
         if (isOpen) {
             fetchProducts();
             fetchCompanyInfo();
+            if (editSaleId) {
+                loadExistingSale(editSaleId);
+            } else {
+                setCart([]);
+                setPaymentMethod(PaymentMethod.Cash);
+                setGlobalDiscount(null);
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, editSaleId]);
+
+    const loadExistingSale = async (id: string) => {
+        try {
+            setIsLoading(true);
+            const sale = await saleService.getById(id);
+            if (sale.items) {
+                const cartItems: CartItem[] = sale.items.map(item => {
+                    const subtotal = item.discountedSubtotal || (item.quantity * item.unitPrice);
+                    return {
+                        productId: item.productId,
+                        productName: item.nameSnapshot,
+                        unit: item.unit || 'pza',
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        isTaxable: item.taxAmount > 0,
+                        taxRate: (item.taxAmount > 0 && subtotal > 0) ? (item.taxAmount / subtotal) : 0.15,
+                        priceIncludesTax: false,
+                        subtotal: subtotal,
+                        taxAmount: item.taxAmount,
+                        total: item.total
+                    };
+                });
+                setCart(cartItems);
+            }
+            setPaymentMethod(sale.paymentMethod);
+            if (sale.applyTax !== undefined) {
+                setApplyTax(sale.applyTax);
+            }
+            if (sale.globalDiscountType !== DiscountType.None) {
+                setGlobalDiscount({
+                    type: sale.globalDiscountType as DiscountType,
+                    value: sale.globalDiscountValue
+                });
+            } else {
+                setGlobalDiscount(null);
+            }
+        } catch (err) {
+            console.error('Error loading sale for POS:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const fetchCompanyInfo = async () => {
         try {
@@ -148,7 +199,7 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
         // Apply global discount
         let discountAmount = 0;
         if (globalDiscount) {
-            discountAmount = globalDiscount.type === 'Percentage'
+            discountAmount = globalDiscount.type === DiscountType.Percentage
                 ? subtotal * (globalDiscount.value / 100)
                 : globalDiscount.value;
             subtotal = Math.max(0, subtotal - discountAmount);
@@ -173,17 +224,22 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                     productId: item.productId,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
-                }))
+                })),
+                channel: channel || 'POS'
             };
-            const response = await saleService.create(request);
-            onSuccess(response.id);
-            setCart([]);
+
+            const response = editSaleId
+                ? await saleService.update(editSaleId, request)
+                : await saleService.create(request);
+
+            onSuccess(editSaleId || response.id);
+            if (!editSaleId) setCart([]);
             onClose();
         } catch (err: any) {
             console.error(err);
             const errorMessage = err.code === 'PLAN_LIMIT_REACHED'
                 ? 'Has alcanzado el límite de tu plan. Actualiza para continuar.'
-                : err.message || 'Error al crear la venta. Intenta nuevamente.';
+                : err.message || 'Error al procesar la venta. Intenta nuevamente.';
             alert(errorMessage);
         } finally {
             setIsSubmitting(false);
@@ -198,7 +254,7 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={`Nueva Venta para ${customerName}`}
+            title={editSaleId ? "Gestionar Orden Existente" : `Nueva Venta para ${customerName}`}
             size="xl"
             footer={
                 <div className="flex items-center justify-between w-full">
@@ -212,27 +268,47 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                             <span className="text-xl font-bold">{companyInfo?.currencySymbol || '$'}{finalTaxTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-primary-600">Total a Pagar</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-primary-600">Total Final</span>
                             <span className="text-3xl font-black text-slate-900">{companyInfo?.currencySymbol || '$'}{finalTotal.toFixed(2)}</span>
                         </div>
                     </div>
                     <button
                         onClick={handleSubmit}
                         disabled={cart.length === 0 || isSubmitting}
-                        className="bg-primary-600 px-10 py-4 rounded-2xl text-white font-black hover:bg-primary-700 transition-all flex items-center gap-3 disabled:bg-slate-300 shadow-xl"
+                        className={`${editSaleId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-primary-600 hover:bg-primary-700'} px-10 py-4 rounded-2xl text-white font-black transition-all flex items-center gap-3 disabled:bg-slate-300 shadow-xl`}
                     >
                         {isSubmitting ? (
-                            <span className="animate-pulse">Procesando...</span>
+                            <span className="animate-pulse">Sincronizando...</span>
                         ) : (
                             <>
                                 <CheckCircle size={24} />
-                                CONFIRMAR VENTA
+                                {editSaleId ? 'ACTUALIZAR ORDEN' : 'CONFIRMAR VENTA'}
                             </>
                         )}
                     </button>
                 </div>
             }
         >
+            {editSaleId && (
+                <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-100 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                            <ArrowRightLeft size={20} className="animate-pulse" />
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Modo Edición Omnicanal</div>
+                            <div className="text-sm font-black text-amber-900">
+                                Orden #{editSaleId.slice(-6).toUpperCase()}
+                                <span className="mx-2 text-amber-300">|</span>
+                                Origen: <span className="text-primary-600 uppercase italic">{channel || 'Desconocido'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="text-[10px] font-black text-amber-400 bg-white px-3 py-1 rounded-full border border-amber-100 uppercase tracking-tighter italic">
+                        Los cambios impactarán el flujo de WhatsApp
+                    </div>
+                </div>
+            )}
             <div className="flex gap-8 h-[60vh]">
                 <div className="flex-1 flex flex-col min-w-0">
                     <div className="relative mb-6">
@@ -335,21 +411,21 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                             <div className="flex gap-2">
                                 <select
                                     className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-primary-500/10 transition-all"
-                                    value={globalDiscount?.type || ''}
+                                    value={globalDiscount?.type ?? ''}
                                     onChange={(e) => {
-                                        if (!e.target.value) {
+                                        if (e.target.value === '') {
                                             setGlobalDiscount(null);
                                         } else {
                                             setGlobalDiscount({
-                                                type: e.target.value as 'Fixed' | 'Percentage',
+                                                type: Number(e.target.value) as DiscountType,
                                                 value: globalDiscount?.value || 0
                                             });
                                         }
                                     }}
                                 >
                                     <option value="">Sin Descuento</option>
-                                    <option value="Fixed">Monto Fijo</option>
-                                    <option value="Percentage">Porcentaje (%)</option>
+                                    <option value={DiscountType.Fixed}>Monto Fijo</option>
+                                    <option value={DiscountType.Percentage}>Porcentaje (%)</option>
                                 </select>
                                 {globalDiscount && (
                                     <input
@@ -361,7 +437,7 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                                             ...globalDiscount,
                                             value: parseFloat(e.target.value) || 0
                                         })}
-                                        placeholder={globalDiscount.type === 'Percentage' ? '%' : '$'}
+                                        placeholder={globalDiscount.type === DiscountType.Percentage ? '%' : '$'}
                                     />
                                 )}
                             </div>

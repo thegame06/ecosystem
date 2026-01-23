@@ -28,4 +28,10 @@ public class CreateSaleRequest
     /// </summary>
     [Required(ErrorMessage = "Payment method is required")]
     public PaymentMethod PaymentMethod { get; set; }
+
+    public bool ApplyTax { get; set; } = true;
+
+    public DiscountRequest? GlobalDiscount { get; set; }
+
+    public string Channel { get; set; } = "POS";
 }

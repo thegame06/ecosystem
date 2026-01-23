@@ -6,6 +6,7 @@ import { PlanType, PLAN_TYPE_LABELS } from '../../types/enums';
 const PlanUsageSidebar: React.FC = () => {
     const [usage, setUsage] = useState<UsageCounters | null>(null);
     const [company, setCompany] = useState<CompanyInfo | null>(null);
+    const [limits, setLimits] = useState<any | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -13,24 +14,20 @@ const PlanUsageSidebar: React.FC = () => {
 
     const fetchData = async () => {
         try {
-            const [companyRes, usageRes] = await Promise.all([
+            const [companyRes, usageRes, limitsRes] = await Promise.all([
                 companyService.getMe(),
-                companyService.getUsage()
+                companyService.getUsage(),
+                companyService.getLimits()
             ]);
             setCompany(companyRes.data);
             setUsage(usageRes.data);
+            setLimits(limitsRes.data);
         } catch (err) {
-            console.error(err);
+            console.error('Error fetching plan data:', err);
         }
     };
 
-    if (!usage || !company) return null;
-
-    const limits = {
-        [PlanType.Starter]: { messages: 300, conversations: 150, invoices: 300 },
-        [PlanType.Pro]: { messages: 1000, conversations: 700, invoices: 1000 },
-        [PlanType.Growth]: { messages: 3000, conversations: 10000, invoices: 10000 }
-    }[company.plan] || { messages: 0, conversations: 0, invoices: 0 };
+    if (!usage || !company || !limits) return null;
 
     const getProgress = (used: number, limit: number) => Math.min(100, (used / limit) * 100);
 
@@ -55,19 +52,19 @@ const PlanUsageSidebar: React.FC = () => {
                 <UsageItem
                     label="Mensajes"
                     used={usage.messagesUsed}
-                    limit={limits.messages}
+                    limit={limits.maxMessages}
                     color="bg-primary-500"
                 />
                 <UsageItem
                     label="Conversaciones"
                     used={usage.conversationsUsed}
-                    limit={limits.conversations}
+                    limit={limits.maxConversations}
                     color="bg-indigo-500"
                 />
                 <UsageItem
                     label="Facturas"
                     used={usage.invoicesUsed}
-                    limit={limits.invoices}
+                    limit={limits.maxInvoices}
                     color="bg-blue-500"
                 />
             </div>

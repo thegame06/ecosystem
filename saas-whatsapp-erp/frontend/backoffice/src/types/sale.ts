@@ -1,4 +1,4 @@
-import { CommercialState, PaymentMethod } from './enums';
+import { CommercialState, PaymentMethod, DiscountType } from './enums';
 
 // ============================================
 // REQUEST TYPES (Frontend → Backend)
@@ -24,9 +24,10 @@ export interface CreateSaleRequest {
     paymentMethod: PaymentMethod;
     applyTax?: boolean;
     globalDiscount?: {
-        type: 'Fixed' | 'Percentage';
+        type: DiscountType;
         value: number;
     };
+    channel?: string;
 }
 
 // ============================================
@@ -42,7 +43,7 @@ export interface SaleItemResponse {
     unit: string;
     quantity: number;
     unitPrice: number;
-    discountType: string;
+    discountType: DiscountType;
     discountValue: number;
     discountedSubtotal: number;
     taxAmount: number;
@@ -64,6 +65,10 @@ export interface Sale {
     taxTotal: number;
     total: number;
     state: CommercialState;
+    applyTax: boolean;
+    globalDiscountType: DiscountType;
+    globalDiscountValue: number;
+    channel: string;
     createdAt: string;
 }
 

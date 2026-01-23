@@ -126,6 +126,19 @@ public class Sale
     [BsonElement("notes")]
     public string? Notes { get; set; }
 
+    [BsonElement("globalDiscountType")]
+    [BsonRepresentation(BsonType.String)]
+    public DiscountType GlobalDiscountType { get; set; } = DiscountType.None;
+
+    [BsonElement("globalDiscountValue")]
+    public decimal GlobalDiscountValue { get; set; }
+
+    [BsonElement("applyTax")]
+    public bool ApplyTax { get; set; } = true;
+
+    [BsonElement("channel")]
+    public string Channel { get; set; } = "POS";
+
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

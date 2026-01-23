@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, ShoppingCart, FileText, Send, User, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
 import { conversationService } from '../../services/conversationService';
+import { saleService } from '../../services/saleService';
 import { Conversation } from '../../types/conversation';
 import { CommercialState } from '../../types/enums';
 import { Customer } from '../../types/customer';
@@ -17,6 +18,7 @@ const ConversationsPage: React.FC = () => {
     const [isPOSOpen, setIsPOSOpen] = useState(false);
     const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
     const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+    const [activeSaleId, setActiveSaleId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchConversations();
@@ -49,9 +51,25 @@ const ConversationsPage: React.FC = () => {
     const fetchCustomer = async (id: string) => {
         try {
             const response = await conversationService.getCustomer(id);
-            setSelectedCustomer(response.data);
+            const customer = response.data;
+            setSelectedCustomer(customer);
+
+            // Buscar si tiene una venta activa para habilitar edición
+            if (customer) {
+                const salesRes = await saleService.search({
+                    filter: `customerId eq '${customer.id}' and state eq 'SALE_CREATED'`,
+                    orderBy: 'createdAt desc',
+                    top: 1
+                });
+                if (salesRes.items.length > 0) {
+                    setActiveSaleId(salesRes.items[0].id);
+                } else {
+                    setActiveSaleId(null);
+                }
+            }
         } catch (err) {
-            console.error('Error fetching customer', err);
+            console.error('Error fetching customer or sale', err);
+            setActiveSaleId(null);
         }
     };
 
@@ -210,14 +228,21 @@ const ConversationsPage: React.FC = () => {
                                     className="flex items-center justify-center gap-3 py-5 px-6 rounded-2xl bg-slate-900 text-white font-black uppercase tracking-widest text-sm hover:bg-slate-800 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-slate-900/20"
                                 >
                                     <ShoppingCart size={22} className="text-primary-400" />
-                                    Crear Venta POS
+                                    {activeSaleId ? 'Editar Orden' : 'Crear Venta POS'}
                                 </button>
                                 <button
-                                    onClick={() => setIsInvoiceOpen(true)}
+                                    onClick={() => {
+                                        if (activeSaleId) {
+                                            setSelectedSaleId(activeSaleId);
+                                            setIsInvoiceOpen(true);
+                                        } else {
+                                            setIsPOSOpen(true);
+                                        }
+                                    }}
                                     className="flex items-center justify-center gap-3 py-5 px-6 rounded-2xl bg-white text-slate-900 border-2 border-slate-100 font-black uppercase tracking-widest text-sm hover:border-primary-500 hover:text-primary-600 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-slate-200/20"
                                 >
                                     <FileText size={22} className="text-indigo-500" />
-                                    Generar Factura
+                                    {activeSaleId ? 'Generar Factura' : 'Vender y Facturar'}
                                 </button>
                             </div>
 
@@ -261,6 +286,8 @@ const ConversationsPage: React.FC = () => {
                         onClose={() => setIsPOSOpen(false)}
                         customerId={selectedCustomer.id}
                         customerName={selectedCustomer.name}
+                        editSaleId={activeSaleId || undefined}
+                        channel="WhatsApp"
                         onSuccess={(saleId) => {
                             setSelectedSaleId(saleId);
                             setIsPOSOpen(false);

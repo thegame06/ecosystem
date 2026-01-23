@@ -10,6 +10,7 @@ using SaaS.Application.DTOs.Sales;
 using SaaS.Application.Interfaces;
 using SaaS.Domain.Documents;
 using SaaS.Domain.Enums;
+using SaaS.Domain.Services;
 
 namespace SaaS.Infrastructure.Services;
 
@@ -55,6 +56,7 @@ public class SaleService : ISaleService
             Total = sale.Total,
             State = sale.State,
             PaymentMethod = sale.PaymentMethod,
+            Channel = sale.Channel,
             CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
             {
@@ -138,11 +140,50 @@ public class SaleService : ISaleService
         if (!Enum.IsDefined(typeof(PaymentMethod), request.PaymentMethod))
             throw new ArgumentException("Invalid payment method");
 
-        // Validar cliente
         var customer = await _customerRepository.GetByIdAsync(request.CustomerId);
         if (customer == null || customer.CompanyId != companyId)
             throw new ArgumentException("Invalid customer");
-        
+
+        var company = await _companyRepository.GetByIdAsync(companyId);
+        var companyTaxRate = company?.TaxRate ?? 0.15m;
+
+        // Cargar productos y validar
+        var saleItemInputs = new List<SaleItemInput>();
+        foreach (var itemReq in request.Items)
+        {
+            var product = await _productRepository.GetByIdAsync(itemReq.ProductId);
+            if (product == null || product.CompanyId != companyId)
+                throw new ArgumentException($"Invalid product {itemReq.ProductId}");
+
+            // RESTAURADO: Validación de inventario
+            if (product.TrackInventory && product.StockQuantity < itemReq.Quantity)
+                throw new InvalidOperationException($"Insufficient stock for product {product.Name}. Available: {product.StockQuantity}, Requested: {itemReq.Quantity}");
+
+            var unitPrice = itemReq.UnitPrice ?? product.Price;
+
+            saleItemInputs.Add(new SaleItemInput
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                Unit = product.Unit ?? "Unidad",
+                Quantity = itemReq.Quantity,
+                UnitPrice = unitPrice,
+                TaxRate = product.TaxRate,
+                IsTaxable = product.IsTaxable,
+                PriceIncludesTax = product.PriceIncludesTax  // CORREGIDO: Ahora se usa
+            });
+        }
+
+        // USAR HELPER DE CÁLCULO (Single Source of Truth)
+        var calculation = SalePricingCalculator.Calculate(
+            saleItemInputs,
+            companyTaxRate,
+            request.ApplyTax ?? true,
+            request.GlobalDiscount?.Type ?? DiscountType.None,
+            request.GlobalDiscount?.Value ?? 0
+        );
+
+        // Crear entidad Sale con resultados del cálculo
         var sale = new Sale
         {
             CompanyId = companyId,
@@ -151,67 +192,35 @@ public class SaleService : ISaleService
             Date = DateTime.UtcNow,
             State = CommercialState.SALE_CREATED,
             PaymentMethod = request.PaymentMethod,
-            Items = new List<SaleItem>()
+            Channel = request.Channel ?? "POS",
+            ApplyTax = request.ApplyTax ?? true,
+            GlobalDiscountType = request.GlobalDiscount?.Type ?? DiscountType.None,
+            GlobalDiscountValue = request.GlobalDiscount?.Value ?? 0,
+            Number = "S-" + DateTime.UtcNow.Ticks.ToString().Substring(10),
+            Items = calculation.Items.Select(calc => new SaleItem
+            {
+                ProductId = calc.ProductId,
+                NameSnapshot = calc.ProductName,
+                ProductName = calc.ProductName,
+                Unit = calc.Unit,
+                Quantity = calc.Quantity,
+                UnitPrice = calc.UnitPrice,
+                DiscountType = calc.DiscountType,
+                DiscountValue = calc.DiscountValue,
+                DiscountedSubtotal = calc.DiscountedSubtotal,
+                Subtotal = calc.DiscountedSubtotal, // Compatibilidad
+                TaxRate = calc.TaxRate,
+                TaxAmount = calc.TaxAmount,
+                Total = calc.Total
+            }).ToList(),
+            Subtotal = calculation.Subtotal,
+            TaxAmount = calculation.TaxTotal,
+            Total = calculation.Total
         };
-
-        var company = await _companyRepository.GetByIdAsync(companyId);
-        var companyTaxRate = company?.TaxRate ?? 0.15m;
-
-        // Procesar items
-        foreach (var itemRequest in request.Items)
-        {
-            var product = await _productRepository.GetByIdAsync(itemRequest.ProductId);
-            if (product == null || product.CompanyId != companyId)
-                throw new ArgumentException($"Invalid product {itemRequest.ProductId}");
-            
-            // Validar inventario si aplica
-            if (product.TrackInventory && product.StockQuantity < itemRequest.Quantity)
-                throw new InvalidOperationException($"Insufficient stock for product {product.Name}");
-
-            var unitPrice = itemRequest.UnitPrice ?? product.Price;
-            var taxRate = product.TaxRate ?? companyTaxRate;
-            
-            decimal lineSubtotal, lineTaxAmount, lineTotal;
-
-            if (product.PriceIncludesTax)
-            {
-                // Precio ya incluye IVA
-                lineTotal = itemRequest.Quantity * unitPrice;
-                lineSubtotal = lineTotal / (1 + taxRate);
-                lineTaxAmount = lineTotal - lineSubtotal;
-            }
-            else
-            {
-                // Precio NO incluye IVA
-                lineSubtotal = itemRequest.Quantity * unitPrice;
-                lineTaxAmount = lineSubtotal * taxRate;
-                lineTotal = lineSubtotal + lineTaxAmount;
-            }
-
-            sale.Items.Add(new SaleItem
-            {
-                ProductId = product.Id,
-                ProductName = product.Name,
-                Quantity = itemRequest.Quantity,
-                UnitPrice = unitPrice,
-                TaxRate = taxRate,
-                Subtotal = Math.Round(lineSubtotal, 2),
-                TaxAmount = Math.Round(lineTaxAmount, 2),
-                Total = Math.Round(lineTotal, 2)
-            });
-        }
-
-        // Calcular totales
-        sale.Subtotal = sale.Items.Sum(i => i.Subtotal);
-        sale.TaxAmount = sale.Items.Sum(i => i.TaxAmount);
-        sale.Total = sale.Items.Sum(i => i.Total);
-
-        // Generar número simple (TODO: Mejorar generador de secuencias)
-        sale.Number = "S-" + DateTime.UtcNow.Ticks.ToString().Substring(10); 
 
         var created = await _saleRepository.CreateAsync(sale);
 
-        // Actualizar estado cliente
+        // Actualizar estado del cliente
         if (customer.CurrentState == CommercialState.LEAD)
         {
             customer.CurrentState = CommercialState.SALE_CREATED;
@@ -228,57 +237,85 @@ public class SaleService : ISaleService
             return null;
 
         if (sale.State == CommercialState.INVOICED || sale.State == CommercialState.PAID)
-             throw new InvalidOperationException("Cannot update a finalized sale");
+            throw new InvalidOperationException("Cannot update a finalized sale");
 
-        if (request.Items != null)
+        // Actualizar campos básicos (configuración comercial)
+        if (request.PaymentMethod.HasValue) sale.PaymentMethod = request.PaymentMethod.Value;
+        if (request.ApplyTax.HasValue) sale.ApplyTax = request.ApplyTax.Value;
+        if (request.Notes != null) sale.Notes = request.Notes;
+        if (request.GlobalDiscount != null)
         {
-             var company = await _companyRepository.GetByIdAsync(companyId);
-             var companyTaxRate = company?.TaxRate ?? 0.15m;
-             
-             sale.Items.Clear();
-             foreach(var itemRequest in request.Items)
-             {
-                 var product = await _productRepository.GetByIdAsync(itemRequest.ProductId);
-                 if (product == null || product.CompanyId != companyId)
-                     throw new ArgumentException($"Invalid product {itemRequest.ProductId}");
-                 
-                 var unitPrice = itemRequest.UnitPrice ?? product.Price;
-                 var taxRate = product.TaxRate ?? companyTaxRate;
-
-                 decimal lineSubtotal, lineTaxAmount, lineTotal;
-
-                 if (product.PriceIncludesTax)
-                 {
-                     lineTotal = itemRequest.Quantity * unitPrice;
-                     lineSubtotal = lineTotal / (1 + taxRate);
-                     lineTaxAmount = lineTotal - lineSubtotal;
-                 }
-                 else
-                 {
-                     lineSubtotal = itemRequest.Quantity * unitPrice;
-                     lineTaxAmount = lineSubtotal * taxRate;
-                     lineTotal = lineSubtotal + lineTaxAmount;
-                 }
-
-                 sale.Items.Add(new SaleItem
-                 {
-                     ProductId = product.Id,
-                     ProductName = product.Name,
-                     Quantity = itemRequest.Quantity,
-                     UnitPrice = unitPrice,
-                     TaxRate = taxRate,
-                     Subtotal = Math.Round(lineSubtotal, 2),
-                     TaxAmount = Math.Round(lineTaxAmount, 2),
-                     Total = Math.Round(lineTotal, 2)
-                 });
-             }
-             sale.Subtotal = sale.Items.Sum(i => i.Subtotal);
-             sale.TaxAmount = sale.Items.Sum(i => i.TaxAmount);
-             sale.Total = sale.Items.Sum(i => i.Total);
+            sale.GlobalDiscountType = request.GlobalDiscount.Type;
+            sale.GlobalDiscountValue = request.GlobalDiscount.Value;
         }
 
-        // TODO Notes...
+        // Si se actualizan items, RECALCULAR usando helper
+        if (request.Items != null)
+        {
+            var company = await _companyRepository.GetByIdAsync(companyId);
+            var companyTaxRate = company?.TaxRate ?? 0.15m;
 
+            // Cargar productos y validar
+            var saleItemInputs = new List<SaleItemInput>();
+            foreach (var itemReq in request.Items)
+            {
+                var product = await _productRepository.GetByIdAsync(itemReq.ProductId);
+                if (product == null || product.CompanyId != companyId)
+                    throw new ArgumentException($"Invalid product {itemReq.ProductId}");
+
+                // RESTAURADO: Validación de inventario en UPDATE
+                if (product.TrackInventory && product.StockQuantity < itemReq.Quantity)
+                    throw new InvalidOperationException($"Insufficient stock for product {product.Name}. Available: {product.StockQuantity}, Requested: {itemReq.Quantity}");
+
+                var unitPrice = itemReq.UnitPrice ?? product.Price;
+
+                saleItemInputs.Add(new SaleItemInput
+                {
+                    ProductId = product.Id,
+                    ProductName = product.Name,
+                    Unit = product.Unit ?? "Unidad",
+                    Quantity = itemReq.Quantity,
+                    UnitPrice = unitPrice,
+                    TaxRate = product.TaxRate,
+                    IsTaxable = product.IsTaxable,
+                    PriceIncludesTax = product.PriceIncludesTax  // CORREGIDO: Ahora se usa
+                });
+            }
+
+            // USAR HELPER DE CÁLCULO (Single Source of Truth)
+            var calculation = SalePricingCalculator.Calculate(
+                saleItemInputs,
+                companyTaxRate,
+                sale.ApplyTax,
+                sale.GlobalDiscountType,
+                sale.GlobalDiscountValue
+            );
+
+            // Actualizar items y totales con resultados del cálculo
+            sale.Items.Clear();
+            sale.Items.AddRange(calculation.Items.Select(calc => new SaleItem
+            {
+                ProductId = calc.ProductId,
+                NameSnapshot = calc.ProductName,
+                ProductName = calc.ProductName,
+                Unit = calc.Unit,
+                Quantity = calc.Quantity,
+                UnitPrice = calc.UnitPrice,
+                DiscountType = calc.DiscountType,
+                DiscountValue = calc.DiscountValue,
+                DiscountedSubtotal = calc.DiscountedSubtotal,
+                Subtotal = calc.DiscountedSubtotal, // Compatibilidad
+                TaxRate = calc.TaxRate,
+                TaxAmount = calc.TaxAmount,
+                Total = calc.Total
+            }));
+
+            sale.Subtotal = calculation.Subtotal;
+            sale.TaxAmount = calculation.TaxTotal;
+            sale.Total = calculation.Total;
+        }
+
+        sale.UpdatedAt = DateTime.UtcNow;
         var updated = await _saleRepository.UpdateAsync(sale);
         var customer = await _customerRepository.GetByIdAsync(sale.CustomerId);
         return MapToResponse(updated, customer?.Name ?? "Unknown");
@@ -333,6 +370,7 @@ public class SaleService : ISaleService
             Total = sale.Total,
             State = sale.State,
             PaymentMethod = sale.PaymentMethod,
+            Channel = sale.Channel,
             CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
             {

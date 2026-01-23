@@ -12,6 +12,8 @@ public class InvoiceResponse
     public string Number { get; set; } = string.Empty;
     public InvoiceStatus Status { get; set; }
     public DateTime? IssuedAt { get; set; }
+    public DateTime? SentAt { get; set; }
+    public DateTime? PaidAt { get; set; }
     public DateTime? DueDate { get; set; }
     public decimal Total { get; set; }
     public List<SaleItemResponse> Items { get; set; } = new();

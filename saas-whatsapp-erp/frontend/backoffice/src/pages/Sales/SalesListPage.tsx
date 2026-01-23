@@ -93,13 +93,12 @@ const SalesListPage: React.FC = () => {
     const handleDownloadPdf = async (saleId: string) => {
         try {
             // Get invoice for this sale
-            const invoiceResponse = await saleService.getInvoice(saleId);
-            if (!invoiceResponse.data) {
+            const invoice = await saleService.getInvoice(saleId);
+            if (!invoice) {
                 toast.error('No se encontró factura para esta venta');
                 return;
             }
 
-            const invoice = invoiceResponse.data;
             const response = await invoiceService.downloadPdf(invoice.id);
 
             // Extract filename from Content-Disposition header if available
@@ -156,8 +155,8 @@ const SalesListPage: React.FC = () => {
             <div className="grid grid-cols-4 gap-6">
                 {[
                     { label: 'Total Ventas', value: sales.length, icon: FileStack, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: 'Facturado', value: sales.filter(s => s.state >= CommercialState.INVOICED).length, icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                    { label: 'Pendiente', value: sales.filter(s => s.state < CommercialState.INVOICED).length, icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50' },
+                    { label: 'Facturado', value: sales.filter(s => s.state === CommercialState.INVOICED || s.state === CommercialState.PAID).length, icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                    { label: 'Pendiente', value: sales.filter(s => s.state === CommercialState.SALE_CREATED || s.state === CommercialState.LEAD).length, icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50' },
                     { label: 'Ingresos (Muestra)', value: `${companyInfo?.currencySymbol || '$'}${sales.reduce((acc, s) => acc + s.total, 0).toLocaleString()}`, icon: ArrowUpRight, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                 ].map((stat, i) => (
                     <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
@@ -279,7 +278,7 @@ const SalesListPage: React.FC = () => {
                                             <FileText size={20} />
                                         </button>
                                     )}
-                                    {sale.state >= CommercialState.INVOICED && (
+                                    {(sale.state === CommercialState.INVOICED || sale.state === CommercialState.PAID) && (
                                         <button
                                             onClick={() => handleDownloadPdf(sale.id)}
                                             className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-emerald-600 transition-all border border-transparent hover:border-slate-200"

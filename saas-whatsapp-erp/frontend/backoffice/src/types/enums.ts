@@ -19,11 +19,23 @@ export enum PlanType {
 }
 
 export enum InvoiceStatus {
-    Draft = 0,
-    Issued = 1,
-    Sent = 2,
-    Paid = 3,
-    Cancelled = 4
+    Draft = 1,
+    Issued = 2,
+    Sent = 3,
+    Paid = 4,
+    Cancelled = 5
+}
+
+export enum PaymentMethod {
+    Cash = 1,
+    Transfer = 2,
+    Card = 3
+}
+
+export enum DiscountType {
+    None = 0,
+    Fixed = 1,
+    Percentage = 2
 }
 
 // Translation labels
@@ -68,12 +80,6 @@ export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
     [InvoiceStatus.Paid]: 'bg-emerald-100 text-emerald-700',
     [InvoiceStatus.Cancelled]: 'bg-red-100 text-red-700'
 };
-
-export enum PaymentMethod {
-    Cash = 1,
-    Transfer = 2,
-    Card = 3
-}
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
     [PaymentMethod.Cash]: 'Efectivo',

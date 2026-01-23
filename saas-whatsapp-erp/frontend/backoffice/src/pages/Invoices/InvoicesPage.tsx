@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Download, Send, Eye, Search, Calendar, DollarSign, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { invoiceService, Invoice } from '../../services/invoiceService';
 import { toast } from 'react-hot-toast';
+import { InvoiceStatus } from '../../types/enums';
 
 const InvoicesPage: React.FC = () => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -74,16 +75,28 @@ const InvoicesPage: React.FC = () => {
         }
     };
 
-    const getStatusBadge = (status: string) => {
-        const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-            'Draft': { label: 'Borrador', color: 'bg-slate-100 text-slate-600 border-slate-200', icon: <Clock size={14} /> },
-            'Issued': { label: 'Emitida', color: 'bg-blue-100 text-blue-600 border-blue-200', icon: <FileText size={14} /> },
-            'Sent': { label: 'Enviada', color: 'bg-indigo-100 text-indigo-600 border-indigo-200', icon: <Send size={14} /> },
-            'Paid': { label: 'Pagada', color: 'bg-emerald-100 text-emerald-600 border-emerald-200', icon: <CheckCircle2 size={14} /> },
-            'Cancelled': { label: 'Cancelada', color: 'bg-red-100 text-red-600 border-red-200', icon: <XCircle size={14} /> },
+    const handleMarkAsPaid = async (invoiceId: string) => {
+        if (!window.confirm('¿Confirmas que recibiste el pago de esta factura?')) return;
+        try {
+            await invoiceService.updateStatus(invoiceId, InvoiceStatus.Paid);
+            toast.success('Factura marcada como pagada');
+            fetchInvoices();
+        } catch (error) {
+            console.error('Error updating status:', error);
+            toast.error('Error al actualizar estado');
+        }
+    };
+
+    const getStatusBadge = (status: InvoiceStatus) => {
+        const statusConfig: Record<number, { label: string; color: string; icon: React.ReactNode }> = {
+            [InvoiceStatus.Draft]: { label: 'Borrador', color: 'bg-slate-100 text-slate-600 border-slate-200', icon: <Clock size={14} /> },
+            [InvoiceStatus.Issued]: { label: 'Emitida', color: 'bg-blue-100 text-blue-600 border-blue-200', icon: <FileText size={14} /> },
+            [InvoiceStatus.Sent]: { label: 'Enviada', color: 'bg-indigo-100 text-indigo-600 border-indigo-200', icon: <Send size={14} /> },
+            [InvoiceStatus.Paid]: { label: 'Pagada', color: 'bg-emerald-100 text-emerald-600 border-emerald-200', icon: <CheckCircle2 size={14} /> },
+            [InvoiceStatus.Cancelled]: { label: 'Cancelada', color: 'bg-red-100 text-red-600 border-red-200', icon: <XCircle size={14} /> },
         };
 
-        const config = statusConfig[status] || statusConfig['Draft'];
+        const config = statusConfig[status] || statusConfig[InvoiceStatus.Draft];
 
         return (
             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border-2 ${config.color}`}>
@@ -96,7 +109,7 @@ const InvoicesPage: React.FC = () => {
     const filteredInvoices = invoices.filter(invoice => {
         const matchesSearch = invoice.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
             invoice.saleId.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+        const matchesStatus = statusFilter === 'all' || invoice.status === Number(statusFilter);
         return matchesSearch && matchesStatus;
     });
 
@@ -138,11 +151,11 @@ const InvoicesPage: React.FC = () => {
                             className="px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all font-bold text-slate-700"
                         >
                             <option value="all">Todos los estados</option>
-                            <option value="Draft">Borrador</option>
-                            <option value="Issued">Emitida</option>
-                            <option value="Sent">Enviada</option>
-                            <option value="Paid">Pagada</option>
-                            <option value="Cancelled">Cancelada</option>
+                            <option value={InvoiceStatus.Draft}>Borrador</option>
+                            <option value={InvoiceStatus.Issued}>Emitida</option>
+                            <option value={InvoiceStatus.Sent}>Enviada</option>
+                            <option value={InvoiceStatus.Paid}>Pagada</option>
+                            <option value={InvoiceStatus.Cancelled}>Cancelada</option>
                         </select>
                     </div>
                 </div>
@@ -211,7 +224,17 @@ const InvoicesPage: React.FC = () => {
                                             <Download size={20} />
                                         </button>
 
-                                        {(invoice.status === 'Issued' || invoice.status === 'Sent') && (
+                                        {(invoice.status === InvoiceStatus.Issued || invoice.status === InvoiceStatus.Sent) && (
+                                            <button
+                                                onClick={() => handleMarkAsPaid(invoice.id)}
+                                                className="p-3 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-600 hover:text-emerald-700 transition-all border-2 border-transparent hover:border-emerald-300"
+                                                title="Marcar como Pagada"
+                                            >
+                                                <DollarSign size={20} />
+                                            </button>
+                                        )}
+
+                                        {(invoice.status === InvoiceStatus.Issued || invoice.status === InvoiceStatus.Sent) && (
                                             <button
                                                 onClick={() => handleSendWhatsApp(invoice.id)}
                                                 className="p-3 rounded-2xl bg-primary-100 hover:bg-primary-200 text-primary-600 hover:text-primary-700 transition-all border-2 border-transparent hover:border-primary-300"

@@ -26,6 +26,10 @@ public class SaleResponse
     public decimal Total { get; set; }
     public CommercialState State { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
+    public bool ApplyTax { get; set; }
+    public DiscountType GlobalDiscountType { get; set; }
+    public decimal GlobalDiscountValue { get; set; }
+    public string Channel { get; set; } = "POS";
     public DateTime CreatedAt { get; set; }
     public List<SaleItemResponse> Items { get; set; } = new();
 }

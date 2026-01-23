@@ -1,5 +1,6 @@
 import api from './api';
 import { PagedResponse } from '../types/pagination';
+import { InvoiceStatus } from '../types/enums';
 
 export const invoiceService = {
     getAll: (page: number = 1, pageSize: number = 20) =>
@@ -12,6 +13,7 @@ export const invoiceService = {
     sendWhatsApp: (id: string) => api.post(`/invoices/${id}/send-whatsapp`),
 
     downloadPdf: (id: string) => api.get(`/invoices/${id}/pdf`, { responseType: 'blob' }),
+    updateStatus: (id: string, status: InvoiceStatus | string) => api.put(`/invoices/${id}/status`, { status }),
 };
 
 export interface Invoice {
@@ -20,6 +22,6 @@ export interface Invoice {
     customerId: string;
     number: string;
     total: number;
-    status: string;
+    status: InvoiceStatus;
     issuedAt: string;
 }

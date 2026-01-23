@@ -89,24 +89,28 @@ public class InvoicesController : ControllerBase
             
             // Get invoice to build professional filename
             var invoice = await _invoiceService.GetByIdAsync(id, companyId);
-            if (invoice == null) return NotFound();
+            if (invoice == null) 
+            {
+                return NotFound(new { message = $"Invoice {id} not found" });
+            }
             
             // Generate PDF
             var pdfBytes = await _invoiceService.GeneratePdfAsync(id, companyId);
-            if (pdfBytes == null) return NotFound();
+            if (pdfBytes == null || pdfBytes.Length == 0) 
+            {
+                return BadRequest(new { message = "Could not generate PDF content. Verify invoice data is complete." });
+            }
             
             // Professional filename: Factura_{Number}_{Date}.pdf
             var date = invoice.IssuedAt ?? DateTime.UtcNow;
             var filename = $"Factura_{invoice.Number}_{date:yyyyMMdd}.pdf";
             
-            // Set Content-Disposition header for immediate download
-            Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{filename}\"");
-            
             return File(pdfBytes, "application/pdf", filename);
         }
-        catch
+        catch (Exception ex)
         {
-            return NotFound();
+            // Log the error more specifically if we had an ILogger here
+            return StatusCode(500, new { message = "Error generating PDF", error = ex.Message });
         }
     }
 

@@ -57,6 +57,8 @@ public class InvoiceService : IInvoiceService
             Number = invoice.Number,
             Status = invoice.Status,
             IssuedAt = invoice.IssuedAt,
+            SentAt = invoice.SentAt,
+            PaidAt = invoice.PaidAt,
             DueDate = invoice.DueDate,
             Total = invoice.Total,
             Items = invoice.Items.Select(i => new SaleItemResponse
@@ -257,6 +259,8 @@ public class InvoiceService : IInvoiceService
             Number = invoice.Number,
             Status = invoice.Status,
             IssuedAt = invoice.IssuedAt,
+            SentAt = invoice.SentAt,
+            PaidAt = invoice.PaidAt,
             DueDate = invoice.DueDate,
             Total = invoice.Total,
             Items = invoice.Items.Select(i => new SaleItemResponse

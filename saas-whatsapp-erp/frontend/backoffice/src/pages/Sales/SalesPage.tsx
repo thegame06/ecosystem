@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Product } from '../../types/product';
 import { Customer } from '../../types/customer';
-import { PaymentMethod } from '../../types/enums';
+import { PaymentMethod, DiscountType } from '../../types/enums';
 import { CartItem, CreateSaleRequest, SaleError } from '../../types/sale';
 import { productService } from '../../services/productService';
 import { customerService } from '../../services/customerService';
@@ -56,10 +56,11 @@ const SalesPage: React.FC = () => {
     // Payment & Conditions
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.Cash);
     const [applyTax, setApplyTax] = useState<boolean>(true);
-    const [globalDiscount, setGlobalDiscount] = useState<{ type: 'Fixed' | 'Percentage', value: number } | null>(null);
+    const [globalDiscount, setGlobalDiscount] = useState<{ type: DiscountType, value: number } | null>(null);
 
     const location = useLocation();
     const [editSaleId, setEditSaleId] = useState<string | null>(null);
+    const [editSaleChannel, setEditSaleChannel] = useState<string | null>(null);
 
     useEffect(() => {
         loadProducts();
@@ -75,6 +76,7 @@ const SalesPage: React.FC = () => {
 
     const loadSaleForEdit = async (saleId: string) => {
         try {
+            setIsLoadingProducts(true);
             const sale = await saleService.getById(saleId);
 
             // Cargar cliente
@@ -85,19 +87,26 @@ const SalesPage: React.FC = () => {
 
             // Cargar items
             if (sale.items) {
-                const cartItems: CartItem[] = sale.items.map(item => ({
-                    productId: item.productId,
-                    productName: item.nameSnapshot,
-                    unit: item.unit || 'pza',
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    isTaxable: item.taxAmount > 0,
-                    taxRate: (item.taxAmount > 0 && item.discountedSubtotal > 0) ? (item.taxAmount / item.discountedSubtotal) : (companyInfo?.taxRate || 0.15),
-                    priceIncludesTax: false,
-                    subtotal: item.discountedSubtotal,
-                    taxAmount: item.taxAmount,
-                    total: item.total
-                }));
+                const cartItems: CartItem[] = sale.items.map(item => {
+                    const subtotal = item.discountedSubtotal || (item.quantity * item.unitPrice);
+                    const taxRate = (item.taxAmount > 0 && subtotal > 0)
+                        ? (item.taxAmount / subtotal)
+                        : (companyInfo?.taxRate || 0.15);
+
+                    return {
+                        productId: item.productId,
+                        productName: item.nameSnapshot,
+                        unit: item.unit || 'pza',
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        isTaxable: item.taxAmount > 0,
+                        taxRate: taxRate,
+                        priceIncludesTax: false,
+                        subtotal: subtotal,
+                        taxAmount: item.taxAmount,
+                        total: item.total
+                    };
+                });
                 setCart(cartItems);
             }
 
@@ -106,9 +115,19 @@ const SalesPage: React.FC = () => {
                 setApplyTax(sale.taxTotal > 0);
             }
 
+            // Global discount rehydration (if available in the backend response)
+            // Note: SaleResponse might need to include globalDiscount info to be perfect
+            // For now, we use the values we have.
+
+            setEditSaleChannel(sale.channel || 'POS');
+            setSuccessMessage(null);
+            setError(null);
+
         } catch (err) {
             console.error('Error loading sale for edit:', err);
             setError({ message: 'Error al cargar la venta para editar' });
+        } finally {
+            setIsLoadingProducts(false);
         }
     };
 
@@ -232,7 +251,7 @@ const SalesPage: React.FC = () => {
     // Calculate global discount amount
     let discountAmount = 0;
     if (globalDiscount) {
-        if (globalDiscount.type === 'Percentage') {
+        if (globalDiscount.type === DiscountType.Percentage) {
             discountAmount = rawSubtotal * (globalDiscount.value / 100);
         } else {
             discountAmount = globalDiscount.value;
@@ -455,9 +474,9 @@ const SalesPage: React.FC = () => {
                                         const val = prompt('Descuento (%) o Monto ($). Escribe "10%" o "50"');
                                         if (val) {
                                             if (val.includes('%')) {
-                                                setGlobalDiscount({ type: 'Percentage', value: parseFloat(val.replace('%', '')) });
+                                                setGlobalDiscount({ type: DiscountType.Percentage, value: parseFloat(val.replace('%', '')) });
                                             } else {
-                                                setGlobalDiscount({ type: 'Fixed', value: parseFloat(val) });
+                                                setGlobalDiscount({ type: DiscountType.Fixed, value: parseFloat(val) });
                                             }
                                         }
                                     }
@@ -465,7 +484,7 @@ const SalesPage: React.FC = () => {
                                 className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${globalDiscount ? 'bg-amber-100 text-amber-900 border-amber-200' : 'bg-white text-slate-400 border-slate-200'}`}
                             >
                                 <Percent size={14} />
-                                {globalDiscount ? (globalDiscount.type === 'Percentage' ? `-${globalDiscount.value}%` : `-$${globalDiscount.value}`) : 'Descuento'}
+                                {globalDiscount ? (globalDiscount.type === DiscountType.Percentage ? `-${globalDiscount.value}%` : `-$${globalDiscount.value}`) : 'Descuento'}
                             </button>
                         </div>
                     </div>
@@ -513,13 +532,37 @@ const SalesPage: React.FC = () => {
 
                     {successMessage && <div className="p-4 rounded-xl border-2 bg-green-50 border-green-200 text-green-900 flex gap-3"><CheckCircle size={20} className="shrink-0" /> <div className="text-sm font-black">{successMessage}</div></div>}
 
-                    <div className="grid grid-cols-2 gap-3">
+                    {editSaleId && (
+                        <div className="mb-6 mx-6 p-4 bg-amber-50 border-2 border-amber-100 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                                    <ArrowRightLeft size={20} className="animate-pulse" />
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Modo Edición Omnicanal</div>
+                                    <div className="text-sm font-black text-amber-900">
+                                        Orden #{editSaleId.slice(-6).toUpperCase()}
+                                        <span className="mx-2 text-amber-300">|</span>
+                                        Origen: <span className="text-primary-600 uppercase italic">{editSaleChannel || 'POS'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => { setEditSaleId(null); clearCart(); }}
+                                className="text-[10px] font-black text-amber-600 hover:text-amber-800 uppercase tracking-widest underline"
+                            >
+                                Cancelar Edición
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3 p-6 pt-0">
                         <button
                             onClick={() => handleSubmit(false)}
                             disabled={isSubmitting || cart.length === 0 || !selectedCustomer}
-                            className="bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-2xl shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                            className={`${editSaleId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-800 hover:bg-slate-900'} text-white font-black py-4 rounded-2xl shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2`}
                         >
-                            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Plus size={20} /> CREAR ORDEN</>}
+                            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>{editSaleId ? <CheckCircle size={20} /> : <Plus size={20} />} {editSaleId ? 'ACTUALIZAR ORDEN' : 'CREAR ORDEN'}</>}
                         </button>
 
                         <button
@@ -527,7 +570,7 @@ const SalesPage: React.FC = () => {
                             disabled={isSubmitting || cart.length === 0 || !selectedCustomer}
                             className="bg-primary-600 hover:bg-primary-700 text-white font-black py-4 rounded-2xl shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                         >
-                            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><CheckCircle size={20} /> VENDER Y COBRAR</>}
+                            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><CheckCircle size={20} /> {editSaleId ? 'ACTUALIZAR Y COBRAR' : 'VENDER Y COBRAR'}</>}
                         </button>
                     </div>
                 </div>

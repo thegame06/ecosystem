@@ -143,7 +143,7 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({ saleId, isOpen
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Forma de Pago</h4>
                                 <div className="bg-white p-6 rounded-3xl border border-slate-200 flex items-center gap-4">
                                     <div className="w-12 h-12 bg-primary-50 rounded-full flex items-center justify-center text-primary-600">
-                                        {sale.paymentMethod === 1 ? <DollarSign size={24} /> : <CreditCard size={24} />}
+                                        {sale.paymentMethod === PaymentMethod.Cash ? <DollarSign size={24} /> : <CreditCard size={24} />}
                                     </div>
                                     <div>
                                         <div className="font-black text-slate-900">{PAYMENT_METHOD_LABELS[sale.paymentMethod as PaymentMethod] || 'No especificada'}</div>
