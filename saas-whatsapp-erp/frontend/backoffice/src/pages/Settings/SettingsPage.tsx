@@ -55,23 +55,27 @@ const SettingsPage: React.FC = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
+            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <Settings className="text-primary-600" />
-                        Configuración
-                    </h1>
-                    <p className="text-sm text-gray-500 mt-1">Administra la configuración de tu empresa y servicios</p>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-primary-100 text-primary-600 rounded-lg">
+                            <Settings size={24} />
+                        </div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Configuración</h1>
+                    </div>
+                    <p className="text-slate-500 font-medium">Administra la configuración de tu empresa y servicios</p>
                 </div>
             </div>
 
-            <div className="flex space-x-1 bg-surface-100 p-1 rounded-xl w-fit">
+            {/* Tabs */}
+            <div className="flex space-x-2 bg-slate-50 p-2 rounded-3xl w-fit border border-slate-100">
                 <button
                     onClick={() => setActiveTab('company')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'company'
-                        ? 'bg-white text-primary-600 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                    className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all ${activeTab === 'company'
+                        ? 'bg-white text-primary-600 shadow-lg shadow-slate-200/50'
+                        : 'text-slate-500 hover:text-slate-700'
                         }`}
                 >
                     <Building2 size={18} />
@@ -79,9 +83,9 @@ const SettingsPage: React.FC = () => {
                 </button>
                 <button
                     onClick={() => setActiveTab('whatsapp')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'whatsapp'
-                        ? 'bg-white text-primary-600 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                    className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all ${activeTab === 'whatsapp'
+                        ? 'bg-white text-primary-600 shadow-lg shadow-slate-200/50'
+                        : 'text-slate-500 hover:text-slate-700'
                         }`}
                 >
                     <MessageSquare size={18} />
@@ -89,17 +93,20 @@ const SettingsPage: React.FC = () => {
                 </button>
             </div>
 
+            {/* Message Alert */}
             {message && (
-                <div className={`p-4 rounded-xl flex items-center gap-3 animate-fade-in ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                <div className={`p-5 rounded-3xl flex items-center gap-4 animate-fade-in border-2 ${message.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-red-50 text-red-700 border-red-200'
                     }`}>
-                    {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                    <span className="text-sm font-medium">{message.text}</span>
+                    {message.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+                    <span className="text-sm font-black">{message.text}</span>
                 </div>
             )}
 
-            <form onSubmit={handleSave} className="space-y-6">
+            <form onSubmit={handleSave} className="space-y-8">
                 {activeTab === 'company' && company && (
-                    <div className="card-premium p-6 space-y-6">
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <Input
                                 label="Nombre de la Empresa"
@@ -121,24 +128,24 @@ const SettingsPage: React.FC = () => {
                                 placeholder="ej. $, C$, €"
                             />
                             <div className="space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">Tasa de Impuesto (IVA)</label>
+                                <label className="block text-sm font-black text-slate-700 uppercase tracking-wider text-[10px]">Tasa de Impuesto (IVA)</label>
                                 <div className="flex items-center gap-4">
                                     <input
                                         type="number"
                                         step="0.01"
-                                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                                        className="block w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all outline-none text-slate-700 font-bold"
                                         value={company.taxRate}
                                         onChange={(e) => setCompany({ ...company, taxRate: parseFloat(e.target.value) })}
                                     />
-                                    <div className="flex items-center gap-2 min-w-max">
+                                    <div className="flex items-center p-3 bg-slate-50 rounded-2xl border border-slate-100 min-w-max">
                                         <input
                                             id="tax-enabled"
                                             type="checkbox"
-                                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                            className="w-5 h-5 rounded-lg border-slate-300 text-primary-600 focus:ring-primary-500 transition-all"
                                             checked={company.isTaxEnabled}
                                             onChange={(e) => setCompany({ ...company, isTaxEnabled: e.target.checked })}
                                         />
-                                        <label htmlFor="tax-enabled" className="text-sm text-gray-700">IVA Habilitado</label>
+                                        <label htmlFor="tax-enabled" className="ml-3 block text-xs font-black text-slate-600 uppercase tracking-wider">IVA Habilitado</label>
                                     </div>
                                 </div>
                             </div>
@@ -147,21 +154,21 @@ const SettingsPage: React.FC = () => {
                 )}
 
                 {activeTab === 'whatsapp' && company && (
-                    <div className="card-premium p-6 space-y-6">
-                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3">
-                            <AlertCircle className="text-blue-600 shrink-0" size={20} />
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl p-8 space-y-6">
+                        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-3xl flex gap-4">
+                            <AlertCircle className="text-blue-600 shrink-0" size={24} />
                             <div>
-                                <h4 className="text-sm font-bold text-blue-900">Conexión WhatsApp Cloud API (Oficial)</h4>
-                                <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+                                <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider">Conexión WhatsApp Cloud API (Oficial)</h4>
+                                <p className="text-xs text-blue-700 mt-2 leading-relaxed font-medium">
                                     Esta integración conecta tu empresa directamente con los servidores de Meta.
                                     <br />
-                                    <strong>⚠️ IMPORTANTE:</strong> Requiere un número telefónico dedicado. Si conectas un número que ya usas en tu celular, <strong>la App de WhatsApp dejará de funcionar en tu dispositivo</strong>.
+                                    <strong className="font-black">⚠️ IMPORTANTE:</strong> Requiere un número telefónico dedicado. Si conectas un número que ya usas en tu celular, <strong className="font-black">la App de WhatsApp dejará de funcionar en tu dispositivo</strong>.
                                 </p>
                                 <a
                                     href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-xs font-semibold text-blue-800 hover:text-blue-950 underline mt-3 inline-block"
+                                    className="text-xs font-black text-blue-800 hover:text-blue-950 underline mt-3 inline-block"
                                 >
                                     📚 ¿Cómo obtener mis credenciales? (Guía Oficial)
                                 </a>
@@ -205,23 +212,23 @@ const SettingsPage: React.FC = () => {
                                 })}
                             />
                             <div className="space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">Estado de WhatsApp</label>
-                                <div className="flex items-center gap-3">
+                                <label className="block text-sm font-black text-slate-700 uppercase tracking-wider text-[10px]">Estado de WhatsApp</label>
+                                <div className="flex items-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
                                     <input
                                         id="whatsapp-active"
                                         type="checkbox"
-                                        className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                        className="w-5 h-5 rounded-lg border-slate-300 text-primary-600 focus:ring-primary-500 transition-all"
                                         checked={company.whatsAppSettings?.isActive || false}
                                         onChange={(e) => setCompany({
                                             ...company,
                                             whatsAppSettings: { ...company.whatsAppSettings, isActive: e.target.checked }
                                         })}
                                     />
-                                    <label htmlFor="whatsapp-active" className="text-sm font-medium text-gray-700">
+                                    <label htmlFor="whatsapp-active" className="ml-3 block text-xs font-black text-slate-600 uppercase tracking-wider">
                                         WhatsApp Activo
                                     </label>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-slate-500 mt-2 font-medium">
                                     Activa esta opción solo cuando hayas configurado correctamente todas las credenciales
                                 </p>
                             </div>
@@ -230,14 +237,18 @@ const SettingsPage: React.FC = () => {
                 )}
 
                 <div className="flex justify-end">
-                    <Button type="submit" disabled={isSaving} className="w-auto flex items-center gap-2">
+                    <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-2xl font-black shadow-xl shadow-primary-900/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
+                    >
                         {isSaving ? (
-                            <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                            <Save size={18} />
+                            <Save size={20} />
                         )}
                         {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-                    </Button>
+                    </button>
                 </div>
             </form>
         </div>

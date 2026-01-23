@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle, Package, User, DollarSign, CreditCard, ArrowRightLeft } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle, Package, User, DollarSign, CreditCard, ArrowRightLeft, ChevronRight, ArrowLeft, Wrench, Truck } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { Product } from '../../types/product';
 import { productService } from '../../services/productService';
 import { saleService } from '../../services/saleService';
 import { companyService, CompanyInfo } from '../../services/companyService';
 import { CreateSaleRequest, CartItem } from '../../types/sale';
-import { PaymentMethod, DiscountType } from '../../types/enums';
+import { PaymentMethod, DiscountType, ProductType, PRODUCT_TYPE_LABELS } from '../../types/enums';
 
 interface POSModalProps {
     isOpen: boolean;
@@ -28,6 +28,8 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.Cash);
     const [applyTax, setApplyTax] = useState<boolean>(true);
     const [globalDiscount, setGlobalDiscount] = useState<{ type: DiscountType, value: number } | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<ProductType | null>(null);
+    const [filterType, setFilterType] = useState<ProductType | 'all'>('all');
 
     useEffect(() => {
         if (isOpen) {
@@ -40,6 +42,10 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                 setPaymentMethod(PaymentMethod.Cash);
                 setGlobalDiscount(null);
             }
+            // Resetear filtros y categorías
+            setSelectedCategory(null);
+            setFilterType('all');
+            setSearch('');
         }
     }, [isOpen, editSaleId]);
 
@@ -107,6 +113,72 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
             setIsLoading(false);
         }
     };
+
+    // Helper: Icono por tipo de producto
+    const getTypeIcon = (type: ProductType) => {
+        switch (type) {
+            case ProductType.Tangible:
+                return <Package size={24} className="text-primary-600" />;
+            case ProductType.Service:
+                return <Wrench size={24} className="text-blue-600" />;
+            case ProductType.Rentable:
+                return <Truck size={24} className="text-amber-600" />;
+            default:
+                return <Package size={24} className="text-slate-600" />;
+        }
+    };
+
+    // Helper: Indicador de stock
+    const getStockIndicator = (product: Product) => {
+        if (!product.trackInventory) {
+            return <span className="text-[10px] font-bold text-slate-400">♾️ Ilimitado</span>;
+        }
+        const stock = product.stock || 0;
+        if (stock === 0) {
+            return <span className="text-[10px] font-bold text-red-500">❌ Sin stock</span>;
+        }
+        if (stock <= 3) {
+            return <span className="text-[10px] font-bold text-amber-500">⚠️ Solo {stock}</span>;
+        }
+        return <span className="text-[10px] font-bold text-green-600">✅ {stock} disponibles</span>;
+    };
+
+    // Agrupación de productos por tipo
+    const groupedProducts = useMemo(() => {
+        const groups: Record<ProductType, Product[]> = {
+            [ProductType.Tangible]: [],
+            [ProductType.Service]: [],
+            [ProductType.Rentable]: []
+        };
+        products.forEach(p => {
+            if (p.type !== undefined && groups[p.type]) {
+                groups[p.type].push(p);
+            }
+        });
+        return groups;
+    }, [products]);
+
+    // Productos filtrados según búsqueda, categoría seleccionada y filtro de tipo
+    const displayProducts = useMemo(() => {
+        let filtered = products;
+
+        // Filtrar por categoría seleccionada
+        if (selectedCategory !== null) {
+            filtered = filtered.filter(p => p.type === selectedCategory);
+        }
+
+        // Filtrar por tipo (si no hay categoría seleccionada)
+        if (selectedCategory === null && filterType !== 'all') {
+            filtered = filtered.filter(p => p.type === filterType);
+        }
+
+        // Filtrar por búsqueda
+        if (search) {
+            filtered = filtered.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+        }
+
+        return filtered;
+    }, [products, search, filterType, selectedCategory]);
 
     const addToCart = (product: Product) => {
         const effectiveTaxRate = product.taxRate !== undefined && product.taxRate !== null
@@ -283,10 +355,6 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
         }
     };
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase())
-    );
-
     return (
         <Modal
             isOpen={isOpen}
@@ -305,24 +373,34 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                             <span className="text-xl font-bold">{companyInfo?.currencySymbol || '$'}{finalTaxTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-primary-600">Total Final</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-primary-600">Total</span>
                             <span className="text-3xl font-black text-slate-900">{companyInfo?.currencySymbol || '$'}{finalTotal.toFixed(2)}</span>
                         </div>
                     </div>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={cart.length === 0 || isSubmitting}
-                        className={`${editSaleId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-primary-600 hover:bg-primary-700'} px-10 py-4 rounded-2xl text-white font-black transition-all flex items-center gap-3 disabled:bg-slate-300 shadow-xl`}
-                    >
-                        {isSubmitting ? (
-                            <span className="animate-pulse">Sincronizando...</span>
-                        ) : (
-                            <>
-                                <CheckCircle size={24} />
-                                {editSaleId ? 'ACTUALIZAR ORDEN' : 'CONFIRMAR VENTA'}
-                            </>
-                        )}
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleSubmit}
+                            disabled={cart.length === 0 || isSubmitting}
+                            className="bg-slate-400 hover:bg-slate-500 px-6 py-3 rounded-2xl text-white font-bold transition-all flex items-center gap-2 disabled:bg-slate-300 shadow-lg text-sm"
+                        >
+                            <Plus size={18} />
+                            Orden
+                        </button>
+                        <button
+                            onClick={handleSubmit}
+                            disabled={cart.length === 0 || isSubmitting}
+                            className={`${editSaleId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-primary-600 hover:bg-primary-700'} px-8 py-3 rounded-2xl text-white font-black transition-all flex items-center gap-2 disabled:bg-slate-300 shadow-xl flex-1 text-sm`}
+                        >
+                            {isSubmitting ? (
+                                <span className="animate-pulse">Sincronizando...</span>
+                            ) : (
+                                <>
+                                    <CheckCircle size={20} />
+                                    {editSaleId ? 'Actualizar Orden' : 'Vender y Cobrar'}
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             }
         >
@@ -352,31 +430,138 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                         <input
                             type="text"
-                            placeholder="Buscar productos o servicios..."
+                            placeholder={selectedCategory ? `Buscar en ${PRODUCT_TYPE_LABELS[selectedCategory]}s...` : "Buscar productos o servicios..."}
                             className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-medium outline-none focus:ring-4 focus:ring-primary-500/10 transition-all shadow-inner"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
 
+                    {/* Navegación contextual */}
+                    {selectedCategory && (
+                        <button
+                            onClick={() => {
+                                setSelectedCategory(null);
+                                setSearch('');
+                            }}
+                            className="mb-4 flex items-center gap-2 text-sm font-bold text-primary-600 hover:text-primary-700 transition-colors"
+                        >
+                            <ArrowLeft size={16} />
+                            Volver a categorías
+                        </button>
+                    )}
+
+                    {/* Filtros rápidos (solo si no hay categoría seleccionada) */}
+                    {!selectedCategory && (
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={() => setFilterType('all')}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                    filterType === 'all'
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                            >
+                                Todos ({products.length})
+                            </button>
+                            <button
+                                onClick={() => setFilterType(ProductType.Tangible)}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                    filterType === ProductType.Tangible
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                            >
+                                Productos ({groupedProducts[ProductType.Tangible].length})
+                            </button>
+                            <button
+                                onClick={() => setFilterType(ProductType.Service)}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                    filterType === ProductType.Service
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                            >
+                                Servicios ({groupedProducts[ProductType.Service].length})
+                            </button>
+                            <button
+                                onClick={() => setFilterType(ProductType.Rentable)}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                    filterType === ProductType.Rentable
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                            >
+                                Rentas ({groupedProducts[ProductType.Rentable].length})
+                            </button>
+                        </div>
+                    )}
+
                     <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 gap-4 h-fit">
                         {isLoading ? (
                             <div className="col-span-2 text-center py-10 text-slate-400 animate-pulse">Cargando productos...</div>
-                        ) : filteredProducts.map(product => (
-                            <div key={product.id} onClick={() => addToCart(product)} className="p-4 bg-white border border-slate-100 rounded-2xl hover:border-primary-500 hover:shadow-xl transition-all cursor-pointer group flex gap-4 items-center">
-                                <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-primary-500 transition-colors">
-                                    <Package size={24} />
-                                </div>
-                                <div className="flex-1 min-w-0 text-left">
-                                    <h4 className="font-bold text-slate-800 truncate text-sm">{product.name}</h4>
-                                    <div className="flex items-center justify-between mt-1">
-                                        <span className="text-lg font-black text-slate-900">{companyInfo?.currencySymbol || '$'}{product.price.toFixed(2)}</span>
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase">{product.unit || 'pza'}</span>
+                        ) : selectedCategory === null && filterType === 'all' && !search ? (
+                            /* Vista de categorías */
+                            <>
+                                {Object.entries(groupedProducts).map(([type, items]) => {
+                                    const productType = Number(type) as ProductType;
+                                    if (items.length === 0) return null;
+                                    return (
+                                        <div
+                                            key={type}
+                                            onClick={() => setSelectedCategory(productType)}
+                                            className="p-6 bg-white border-2 border-slate-100 rounded-2xl hover:border-primary-500 hover:shadow-xl transition-all cursor-pointer group col-span-2"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-primary-50 transition-colors">
+                                                        {getTypeIcon(productType)}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-black text-slate-800 text-lg">{PRODUCT_TYPE_LABELS[productType]}s</h4>
+                                                        <p className="text-sm text-slate-500 font-medium">{items.length} {items.length === 1 ? 'disponible' : 'disponibles'}</p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={24} className="text-slate-400 group-hover:text-primary-600 transition-colors" />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        ) : (
+                            /* Vista de productos */
+                            displayProducts.map(product => {
+                                const canAdd = !product.trackInventory || (product.stock && product.stock > 0);
+                                return (
+                                    <div
+                                        key={product.id}
+                                        onClick={() => canAdd && addToCart(product)}
+                                        className={`p-4 bg-white border border-slate-100 rounded-2xl transition-all flex gap-4 items-center ${
+                                            canAdd 
+                                                ? 'hover:border-primary-500 hover:shadow-xl cursor-pointer group' 
+                                                : 'opacity-50 cursor-not-allowed'
+                                        }`}
+                                    >
+                                        <div className={`w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center transition-colors ${
+                                            canAdd ? 'text-slate-400 group-hover:text-primary-500' : 'text-slate-300'
+                                        }`}>
+                                            <Package size={24} />
+                                        </div>
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <h4 className="font-bold text-slate-800 truncate text-sm">{product.name}</h4>
+                                            <div className="flex items-center justify-between mt-1">
+                                                <span className="text-lg font-black text-slate-900">{companyInfo?.currencySymbol || '$'}{product.price.toFixed(2)}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{product.unit || 'pza'}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-1">
+                                                {getStockIndicator(product)}
+                                                {product.priceIncludesTax && <span className="text-[8px] text-green-600 font-black">IVA INC.</span>}
+                                            </div>
+                                        </div>
                                     </div>
-                                    {product.priceIncludesTax && <div className="text-[8px] text-green-600 font-black">IVA INC.</div>}
-                                </div>
-                            </div>
-                        ))}
+                                );
+                            })
+                        )}
                     </div>
                 </div>
 

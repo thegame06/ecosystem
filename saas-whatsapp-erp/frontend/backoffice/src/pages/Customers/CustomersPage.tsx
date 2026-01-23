@@ -150,105 +150,109 @@ const CustomersPage: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
+        <div className="space-y-8 animate-fade-in">
+            {/* Header */}
+            <div className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <Users className="text-blue-600" />
-                        Clientes
-                    </h1>
-                    <p className="text-sm text-gray-500 mt-1">Gestiona tu base de datos de clientes y contactos</p>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-primary-100 text-primary-600 rounded-lg">
+                            <Users size={24} />
+                        </div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Clientes</h1>
+                    </div>
+                    <p className="text-slate-500 font-medium">Gestiona tu base de datos de clientes y contactos</p>
                 </div>
-                <div className="w-40">
-                    <Button onClick={() => handleOpenModal()} className="flex items-center justify-center gap-2">
-                        <Plus size={18} />
-                        Nuevo
-                    </Button>
-                </div>
+                <button
+                    onClick={() => handleOpenModal()}
+                    className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3.5 rounded-2xl font-black shadow-xl shadow-primary-900/20 transition-all hover:scale-105 active:scale-95"
+                >
+                    <Plus size={20} />
+                    NUEVO CLIENTE
+                </button>
             </div>
 
             {/* Filters / Search */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-4">
-                <div className="relative flex-1 max-w-md">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search size={18} className="text-gray-400" />
-                    </div>
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                     <input
                         type="text"
                         placeholder="Buscar por nombre, teléfono o email..."
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all outline-none text-slate-700 font-bold"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
             </div>
 
-            {/* Customer List Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCustomers.map((customer) => (
-                    <div key={customer.id} className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-                        <div className="flex justify-start items-start space-x-4">
-                            <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
-                                {getInitials(customer)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-lg font-medium text-gray-900 truncate">
-                                    {getDisplayName(customer)}
-                                </h3>
-                                <div className="mt-1 flex items-center text-sm text-gray-500">
-                                    <Phone size={14} className="mr-1.5 flex-shrink-0" />
-                                    {customer.phone}
-                                    {customer.whatsappConsent && (
-                                        <div className="ml-2 flex items-center text-green-600 tooltip" title="WhatsApp Consentimiento">
-                                            <MessageCircle size={14} className="text-green-500" />
+            {/* Customer Grid */}
+            {isLoading ? (
+                <div className="text-center py-12">
+                    <p className="text-slate-400 font-bold">Cargando clientes...</p>
+                </div>
+            ) : filteredCustomers.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 border-dashed">
+                    <Users className="mx-auto h-12 w-12 text-slate-300" />
+                    <h3 className="mt-2 text-sm font-black text-slate-900">No se encontraron clientes</h3>
+                    <p className="mt-1 text-sm text-slate-500">Comienza creando un nuevo cliente para tu base de datos.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredCustomers.map((customer) => (
+                        <div key={customer.id} className="bg-white rounded-3xl border border-slate-100 p-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-start gap-4 flex-1">
+                                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-primary-100 to-primary-200 flex items-center justify-center text-primary-700 font-black text-lg shadow-sm">
+                                        {getInitials(customer)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-lg font-black text-slate-900 truncate leading-tight">
+                                            {getDisplayName(customer)}
+                                        </h3>
+                                        <div className="mt-2 flex items-center text-sm text-slate-500 font-medium">
+                                            <Phone size={14} className="mr-1.5 flex-shrink-0" />
+                                            {customer.phone}
+                                            {customer.whatsappConsent && (
+                                                <div className="ml-2 flex items-center text-primary-600" title="WhatsApp Consentimiento">
+                                                    <MessageCircle size={14} className="text-primary-500" />
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                        {customer.email && (
+                                            <div className="mt-1 flex items-center text-sm text-slate-500 font-medium">
+                                                <Mail size={14} className="mr-1.5 flex-shrink-0" />
+                                                <span className="truncate">{customer.email}</span>
+                                            </div>
+                                        )}
+                                        {(customer.city || customer.address) && (
+                                            <div className="mt-1 flex items-center text-sm text-slate-500 font-medium">
+                                                <MapPin size={14} className="mr-1.5 flex-shrink-0" />
+                                                <span className="truncate">
+                                                    {[customer.city, customer.address].filter(Boolean).join(', ')}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                {customer.email && (
-                                    <div className="mt-1 flex items-center text-sm text-gray-500">
-                                        <Mail size={14} className="mr-1.5 flex-shrink-0" />
-                                        <span className="truncate">{customer.email}</span>
-                                    </div>
-                                )}
-                                {(customer.city || customer.address) && (
-                                    <div className="mt-1 flex items-center text-sm text-gray-500">
-                                        <MapPin size={14} className="mr-1.5 flex-shrink-0" />
-                                        <span className="truncate">
-                                            {[customer.city, customer.address].filter(Boolean).join(', ')}
-                                        </span>
-                                    </div>
-                                )}
                             </div>
-                            <div className="flex flex-col space-y-2">
+                            <div className="flex gap-2 pt-4 border-t border-slate-100">
                                 <button
                                     onClick={() => handleOpenModal(customer)}
-                                    className="text-gray-400 hover:text-blue-600 transition-colors"
+                                    className="flex-1 p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-primary-600 transition-all border border-transparent hover:border-slate-200 font-bold text-sm"
                                 >
-                                    <Pencil size={18} />
+                                    <Pencil size={16} className="inline mr-1" />
+                                    Editar
                                 </button>
                                 <button
                                     onClick={() => handleDelete(customer.id)}
-                                    className="text-gray-400 hover:text-red-600 transition-colors"
+                                    className="flex-1 p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-red-600 transition-all border border-transparent hover:border-slate-200 font-bold text-sm"
                                 >
-                                    <Trash2 size={18} />
+                                    <Trash2 size={16} className="inline mr-1" />
+                                    Eliminar
                                 </button>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
-
-            {isLoading && (
-                <div className="text-center py-12">
-                    <p className="text-gray-500">Cargando clientes...</p>
-                </div>
-            )}
-
-            {!isLoading && filteredCustomers.length === 0 && (
-                <div className="p-12 text-center bg-white rounded-lg border border-gray-100 border-dashed">
-                    <Users className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron clientes</h3>
-                    <p className="mt-1 text-sm text-gray-500">Comienza creando un nuevo cliente para tu base de datos.</p>
+                    ))}
                 </div>
             )}
 
@@ -277,15 +281,15 @@ const CustomersPage: React.FC = () => {
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     />
 
-                    <div className="flex items-center my-2">
+                    <div className="flex items-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
                         <input
                             id="whatsapp-consent"
                             type="checkbox"
-                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            className="w-5 h-5 rounded-lg border-slate-300 text-primary-600 focus:ring-primary-500 transition-all"
                             checked={formData.whatsappConsent}
                             onChange={(e) => setFormData({ ...formData, whatsappConsent: e.target.checked })}
                         />
-                        <label htmlFor="whatsapp-consent" className="ml-2 block text-sm text-gray-900">
+                        <label htmlFor="whatsapp-consent" className="ml-3 block text-xs font-black text-slate-600 uppercase tracking-wider">
                             Tiene consentimiento para recibir mensajes de WhatsApp
                         </label>
                     </div>
@@ -304,22 +308,29 @@ const CustomersPage: React.FC = () => {
                     />
 
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Dirección</label>
                         <textarea
-                            className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="appearance-none block w-full px-4 py-3 bg-slate-50 border-none rounded-2xl placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-slate-700 font-bold sm:text-sm"
                             rows={3}
                             value={formData.address}
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         />
                     </div>
 
-                    <div className="pt-4 flex justify-end gap-3">
-                        <Button type="button" variant="secondary" onClick={handleCloseModal} className="w-auto">
+                    <div className="pt-6 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={handleCloseModal}
+                            className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold transition-all"
+                        >
                             Cancelar
-                        </Button>
-                        <Button type="submit" className="w-auto">
-                            Guardar
-                        </Button>
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-black shadow-lg shadow-primary-900/20 transition-all hover:scale-105 active:scale-95"
+                        >
+                            {editingCustomer ? 'ACTUALIZAR' : 'GUARDAR'}
+                        </button>
                     </div>
                 </form>
             </Modal>
