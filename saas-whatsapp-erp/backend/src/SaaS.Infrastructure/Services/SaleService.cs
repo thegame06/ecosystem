@@ -178,7 +178,7 @@ public class SaleService : ISaleService
         var calculation = SalePricingCalculator.Calculate(
             saleItemInputs,
             companyTaxRate,
-            request.ApplyTax ?? true,
+            request.ApplyTax,
             request.GlobalDiscount?.Type ?? DiscountType.None,
             request.GlobalDiscount?.Value ?? 0
         );
@@ -193,7 +193,7 @@ public class SaleService : ISaleService
             State = CommercialState.SALE_CREATED,
             PaymentMethod = request.PaymentMethod,
             Channel = request.Channel ?? "POS",
-            ApplyTax = request.ApplyTax ?? true,
+            ApplyTax = request.ApplyTax,
             GlobalDiscountType = request.GlobalDiscount?.Type ?? DiscountType.None,
             GlobalDiscountValue = request.GlobalDiscount?.Value ?? 0,
             Number = "S-" + DateTime.UtcNow.Ticks.ToString().Substring(10),

@@ -261,15 +261,47 @@ const SalesPage: React.FC = () => {
     // Apply discount cap
     discountAmount = Math.min(discountAmount, rawSubtotal);
 
-    const cartSubtotal = rawSubtotal - discountAmount;
+    // CRÍTICO: Calcular totales IGUAL que el backend (SalePricingCalculator)
+    let finalSubtotal = 0;
+    let finalTaxTotal = 0;
 
-    // Calculate Tax
-    // This assumes a single tax rate for simplicity when applying global discounts.
-    const cartTaxTotal = applyTax
-        ? cartSubtotal * (companyInfo?.taxRate || 0.15)
-        : 0;
+    cart.forEach(item => {
+        // Distribución proporcional del descuento global
+        const lineDiscountShare = rawSubtotal > 0
+            ? (item.subtotal / rawSubtotal) * discountAmount
+            : 0;
 
-    const cartTotal = cartSubtotal + cartTaxTotal;
+        const subtotalAfterDiscount = item.subtotal - lineDiscountShare;
+        const taxRate = item.taxRate || companyInfo?.taxRate || 0.15;
+
+        let lineSubtotal: number;
+        let lineTaxAmount: number;
+
+        // REGLA CRÍTICA: PriceIncludesTax (igual que backend)
+        if (item.priceIncludesTax) {
+            // Precio YA incluye IVA - descomponer
+            const lineTotal = subtotalAfterDiscount;
+            lineSubtotal = lineTotal / (1 + taxRate);
+            lineTaxAmount = lineTotal - lineSubtotal;
+        } else {
+            // Precio NO incluye IVA - cálculo normal
+            lineSubtotal = subtotalAfterDiscount;
+            lineTaxAmount = 0;
+
+            // Aplicar IVA solo si empresa y producto lo permiten
+            if (applyTax && item.isTaxable) {
+                lineTaxAmount = lineSubtotal * taxRate;
+            }
+        }
+
+        finalSubtotal += lineSubtotal;
+        finalTaxTotal += lineTaxAmount;
+    });
+
+    // Redondear a 2 decimales (igual que backend)
+    finalSubtotal = Math.round(finalSubtotal * 100) / 100;
+    finalTaxTotal = Math.round(finalTaxTotal * 100) / 100;
+    const finalTotal = Math.round((finalSubtotal + finalTaxTotal) * 100) / 100;
 
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [lastSaleId, setLastSaleId] = useState<string | null>(null);
@@ -505,18 +537,18 @@ const SalesPage: React.FC = () => {
                         {discountAmount > 0 && (
                             <div className="flex justify-between text-xs text-slate-700 font-bold border-t border-slate-200 pt-1 mt-1">
                                 <span>Subtotal Neto</span>
-                                <span>{companyInfo?.currencySymbol || '$'}{cartSubtotal.toFixed(2)}</span>
+                                <span>{companyInfo?.currencySymbol || '$'}{(rawSubtotal - discountAmount).toFixed(2)}</span>
                             </div>
                         )}
 
                         <div className="flex justify-between text-xs text-slate-500 font-bold">
                             <span>IVA {applyTax ? `(${((companyInfo?.taxRate || 0.15) * 100).toFixed(0)}%)` : '(0%)'}</span>
-                            <span>{companyInfo?.currencySymbol || '$'}{cartTaxTotal.toFixed(2)}</span>
+                            <span>{companyInfo?.currencySymbol || '$'}{finalTaxTotal.toFixed(2)}</span>
                         </div>
 
                         <div className="flex justify-between text-2xl font-black text-slate-900 pt-2 border-t border-slate-200 mt-1">
                             <span>TOTAL</span>
-                            <span className="text-primary-600">{companyInfo?.currencySymbol || '$'}{cartTotal.toFixed(2)}</span>
+                            <span className="text-primary-600">{companyInfo?.currencySymbol || '$'}{finalTotal.toFixed(2)}</span>
                         </div>
                     </div>
 

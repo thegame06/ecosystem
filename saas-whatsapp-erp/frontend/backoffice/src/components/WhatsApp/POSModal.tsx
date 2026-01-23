@@ -186,27 +186,64 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
     const cartSubtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
 
     const calculateFinalTotals = () => {
-        let subtotal = cartSubtotal;
-        let taxTotal = 0;
+        const rawSubtotal = cartSubtotal;
 
-        // Re-calculate tax based on applyTax toggle
-        cart.forEach(item => {
-            if (applyTax && item.isTaxable) {
-                taxTotal += item.taxAmount;
-            }
-        });
-
-        // Apply global discount
+        // Calculate global discount amount
         let discountAmount = 0;
         if (globalDiscount) {
-            discountAmount = globalDiscount.type === DiscountType.Percentage
-                ? subtotal * (globalDiscount.value / 100)
-                : globalDiscount.value;
-            subtotal = Math.max(0, subtotal - discountAmount);
+            if (globalDiscount.type === DiscountType.Percentage) {
+                discountAmount = rawSubtotal * (globalDiscount.value / 100);
+            } else {
+                discountAmount = globalDiscount.value;
+            }
         }
 
-        const total = subtotal + taxTotal;
-        return { subtotal, taxTotal, total };
+        // Apply discount cap
+        discountAmount = Math.min(discountAmount, rawSubtotal);
+
+        // CRÍTICO: Calcular totales IGUAL que el backend (SalePricingCalculator)
+        let finalSubtotal = 0;
+        let finalTaxTotal = 0;
+
+        cart.forEach(item => {
+            // Distribución proporcional del descuento global
+            const lineDiscountShare = rawSubtotal > 0
+                ? (item.subtotal / rawSubtotal) * discountAmount
+                : 0;
+
+            const subtotalAfterDiscount = item.subtotal - lineDiscountShare;
+            const taxRate = item.taxRate || companyInfo?.taxRate || 0.15;
+
+            let lineSubtotal: number;
+            let lineTaxAmount: number;
+
+            // REGLA CRÍTICA: PriceIncludesTax (igual que backend)
+            if (item.priceIncludesTax) {
+                // Precio YA incluye IVA - descomponer
+                const lineTotal = subtotalAfterDiscount;
+                lineSubtotal = lineTotal / (1 + taxRate);
+                lineTaxAmount = lineTotal - lineSubtotal;
+            } else {
+                // Precio NO incluye IVA - cálculo normal
+                lineSubtotal = subtotalAfterDiscount;
+                lineTaxAmount = 0;
+
+                // Aplicar IVA solo si empresa y producto lo permiten
+                if (applyTax && item.isTaxable) {
+                    lineTaxAmount = lineSubtotal * taxRate;
+                }
+            }
+
+            finalSubtotal += lineSubtotal;
+            finalTaxTotal += lineTaxAmount;
+        });
+
+        // Redondear a 2 decimales (igual que backend)
+        finalSubtotal = Math.round(finalSubtotal * 100) / 100;
+        finalTaxTotal = Math.round(finalTaxTotal * 100) / 100;
+        const finalTotal = Math.round((finalSubtotal + finalTaxTotal) * 100) / 100;
+
+        return { subtotal: finalSubtotal, taxTotal: finalTaxTotal, total: finalTotal };
     };
 
     const { subtotal: finalSubtotal, taxTotal: finalTaxTotal, total: finalTotal } = calculateFinalTotals();
