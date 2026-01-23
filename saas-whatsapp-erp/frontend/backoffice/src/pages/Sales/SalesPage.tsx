@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
     ShoppingCart,
     Search,
@@ -23,6 +24,7 @@ import { productService } from '../../services/productService';
 import { customerService } from '../../services/customerService';
 import { saleService } from '../../services/saleService';
 import { companyService, CompanyInfo } from '../../services/companyService';
+import InvoiceModal from '../../components/WhatsApp/InvoiceModal';
 
 /**
  * POS RÁPIDO - CREAR VENTA
@@ -56,11 +58,59 @@ const SalesPage: React.FC = () => {
     const [applyTax, setApplyTax] = useState<boolean>(true);
     const [globalDiscount, setGlobalDiscount] = useState<{ type: 'Fixed' | 'Percentage', value: number } | null>(null);
 
+    const location = useLocation();
+    const [editSaleId, setEditSaleId] = useState<string | null>(null);
+
     useEffect(() => {
         loadProducts();
         loadCustomers();
         loadCompanyInfo();
-    }, []);
+
+        const state = location.state as { editSaleId?: string };
+        if (state?.editSaleId) {
+            setEditSaleId(state.editSaleId);
+            loadSaleForEdit(state.editSaleId);
+        }
+    }, [location.state]);
+
+    const loadSaleForEdit = async (saleId: string) => {
+        try {
+            const sale = await saleService.getById(saleId);
+
+            // Cargar cliente
+            if (sale.customerId) {
+                const customer = await customerService.getById(sale.customerId);
+                setSelectedCustomer(customer || null);
+            }
+
+            // Cargar items
+            if (sale.items) {
+                const cartItems: CartItem[] = sale.items.map(item => ({
+                    productId: item.productId,
+                    productName: item.nameSnapshot,
+                    unit: item.unit || 'pza',
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    isTaxable: item.taxAmount > 0,
+                    taxRate: (item.taxAmount > 0 && item.discountedSubtotal > 0) ? (item.taxAmount / item.discountedSubtotal) : (companyInfo?.taxRate || 0.15),
+                    priceIncludesTax: false,
+                    subtotal: item.discountedSubtotal,
+                    taxAmount: item.taxAmount,
+                    total: item.total
+                }));
+                setCart(cartItems);
+            }
+
+            setPaymentMethod(sale.paymentMethod);
+            if (sale.taxTotal !== undefined) {
+                setApplyTax(sale.taxTotal > 0);
+            }
+
+        } catch (err) {
+            console.error('Error loading sale for edit:', err);
+            setError({ message: 'Error al cargar la venta para editar' });
+        }
+    };
 
     const loadCompanyInfo = async () => {
         try {
@@ -202,7 +252,10 @@ const SalesPage: React.FC = () => {
 
     const cartTotal = cartSubtotal + cartTaxTotal;
 
-    const handleSubmit = async () => {
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [lastSaleId, setLastSaleId] = useState<string | null>(null);
+
+    const handleSubmit = async (autoInvoice: boolean = false) => {
         if (!selectedCustomer || cart.length === 0) return;
         setIsSubmitting(true);
         setError(null);
@@ -218,9 +271,21 @@ const SalesPage: React.FC = () => {
                 applyTax,
                 globalDiscount: globalDiscount || undefined
             };
-            await saleService.create(request);
-            setSuccessMessage(`¡Venta creada exitosamente!`);
+            const response = editSaleId
+                ? await saleService.update(editSaleId, request)
+                : await saleService.create(request);
+
+            const saleId = editSaleId || response.id;
+
+            if (autoInvoice) {
+                setLastSaleId(saleId);
+                setShowInvoiceModal(true);
+            } else {
+                setSuccessMessage(editSaleId ? `¡Orden actualizada exitosamente!` : `¡Venta creada exitosamente!`);
+            }
+
             clearCart();
+            setEditSaleId(null);
             setGlobalDiscount(null);
             setApplyTax(true);
             setPaymentMethod(PaymentMethod.Cash);
@@ -448,11 +513,41 @@ const SalesPage: React.FC = () => {
 
                     {successMessage && <div className="p-4 rounded-xl border-2 bg-green-50 border-green-200 text-green-900 flex gap-3"><CheckCircle size={20} className="shrink-0" /> <div className="text-sm font-black">{successMessage}</div></div>}
 
-                    <button onClick={handleSubmit} disabled={isSubmitting || cart.length === 0 || !selectedCustomer} className="w-full bg-primary-600 hover:bg-primary-700 text-white font-black py-4 rounded-2xl shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2">
-                        {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><CheckCircle size={20} /> CONFIRMAR VENTA</>}
-                    </button>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => handleSubmit(false)}
+                            disabled={isSubmitting || cart.length === 0 || !selectedCustomer}
+                            className="bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-2xl shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Plus size={20} /> CREAR ORDEN</>}
+                        </button>
+
+                        <button
+                            onClick={() => handleSubmit(true)}
+                            disabled={isSubmitting || cart.length === 0 || !selectedCustomer}
+                            className="bg-primary-600 hover:bg-primary-700 text-white font-black py-4 rounded-2xl shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><CheckCircle size={20} /> VENDER Y COBRAR</>}
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            {lastSaleId && (
+                <InvoiceModal
+                    isOpen={showInvoiceModal}
+                    onClose={() => {
+                        setShowInvoiceModal(false);
+                        setSuccessMessage('¡Venta facturada exitosamente!');
+                    }}
+                    saleId={lastSaleId}
+                    customerName={selectedCustomer ? getCustomerDisplayName(selectedCustomer) : 'Cliente'}
+                    onSuccess={() => {
+                        setShowInvoiceModal(false);
+                        setSuccessMessage('¡Factura enviada exitosamente!');
+                    }}
+                />
+            )}
         </div>
     );
 };

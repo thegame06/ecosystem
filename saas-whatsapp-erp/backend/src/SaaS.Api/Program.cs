@@ -54,6 +54,9 @@ builder.Services.AddSingleton<IConversationRepository, ConversationRepository>()
 builder.Services.AddSingleton<IUsageCountersRepository, UsageCountersRepository>();
 builder.Services.AddSingleton<IWhatsAppNumberRepository, WhatsAppNumberRepository>();
 
+// Generic repositories
+builder.Services.AddSingleton(typeof(IMongoRepository<>), typeof(MongoRepository<>));
+
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<PlanLimitFilter>();
@@ -92,6 +95,10 @@ builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IPlanService, PlanService>();
+
+// PDF Generator
+builder.Services.AddSingleton<SaaS.Application.Interfaces.IPdfGenerator, SaaS.Infrastructure.Pdf.QuestPdfGenerator>();
+
 builder.Services.AddHttpClient<IWhatsAppProvider, WhatsAppProvider>();
 // builder.Services.AddScoped<IWhatsAppProvider, WhatsAppProviderMock>();
 

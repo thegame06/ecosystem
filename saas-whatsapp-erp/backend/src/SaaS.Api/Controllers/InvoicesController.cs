@@ -85,9 +85,24 @@ public class InvoicesController : ControllerBase
     {
         try
         {
-             var pdfBytes = await _invoiceService.GeneratePdfAsync(id, GetCompanyId());
-             if (pdfBytes == null) return NotFound();
-             return File(pdfBytes, "application/pdf", $"invoice-{id}.pdf");
+            var companyId = GetCompanyId();
+            
+            // Get invoice to build professional filename
+            var invoice = await _invoiceService.GetByIdAsync(id, companyId);
+            if (invoice == null) return NotFound();
+            
+            // Generate PDF
+            var pdfBytes = await _invoiceService.GeneratePdfAsync(id, companyId);
+            if (pdfBytes == null) return NotFound();
+            
+            // Professional filename: Factura_{Number}_{Date}.pdf
+            var date = invoice.IssuedAt ?? DateTime.UtcNow;
+            var filename = $"Factura_{invoice.Number}_{date:yyyyMMdd}.pdf";
+            
+            // Set Content-Disposition header for immediate download
+            Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{filename}\"");
+            
+            return File(pdfBytes, "application/pdf", filename);
         }
         catch
         {

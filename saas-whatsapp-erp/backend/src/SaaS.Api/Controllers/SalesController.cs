@@ -94,11 +94,18 @@ public class SalesController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Get invoice for a sale. Returns 200 with data=null if no invoice exists yet.
+    /// </summary>
     [HttpGet("{id}/invoice")]
-    public async Task<ActionResult<InvoiceResponse>> GetInvoice(string id)
+    public async Task<ActionResult<ApiResponse<InvoiceResponse>>> GetInvoice(string id)
     {
         var invoice = await _saleService.GetInvoiceAsync(id, GetCompanyId());
-        if (invoice == null) return NotFound("Invoice not found for this sale. Maybe it hasn't been generated yet.");
-        return Ok(invoice);
+        return Ok(new ApiResponse<InvoiceResponse>
+        {
+            Data = invoice,
+            Success = true,
+            Message = invoice == null ? "No invoice generated yet for this sale" : null
+        });
     }
 }

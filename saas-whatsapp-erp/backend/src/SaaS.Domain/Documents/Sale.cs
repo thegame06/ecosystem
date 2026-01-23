@@ -13,8 +13,14 @@ public class SaleItem
     [BsonRepresentation(BsonType.ObjectId)]
     public string ProductId { get; set; } = string.Empty;
 
-    [BsonElement("productName")]
+    [BsonElement("nameSnapshot")]
+    public string NameSnapshot { get; set; } = string.Empty;
+
+    [BsonElement("productName")] // Backward compatibility
     public string ProductName { get; set; } = string.Empty;
+
+    [BsonElement("unit")]
+    public string Unit { get; set; } = "Unidad";
 
     [BsonElement("quantity")]
     public decimal Quantity { get; set; }
@@ -22,14 +28,24 @@ public class SaleItem
     [BsonElement("unitPrice")]
     public decimal UnitPrice { get; set; }
 
+    [BsonElement("discountType")]
+    [BsonRepresentation(BsonType.String)]
+    public DiscountType DiscountType { get; set; } = DiscountType.None;
+
+    [BsonElement("discountValue")]
+    public decimal DiscountValue { get; set; }
+
+    [BsonElement("discountedSubtotal")]
+    public decimal DiscountedSubtotal { get; set; }
+
     [BsonElement("taxRate")]
     public decimal TaxRate { get; set; }
 
-    [BsonElement("subtotal")]
-    public decimal Subtotal { get; set; }
-
     [BsonElement("taxAmount")]
     public decimal TaxAmount { get; set; }
+
+    [BsonElement("subtotal")] // Backward compatibility
+    public decimal Subtotal { get; set; }
 
     [BsonElement("total")]
     public decimal Total { get; set; }

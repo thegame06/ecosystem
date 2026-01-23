@@ -199,7 +199,7 @@ public class CustomerService : ICustomerService
             Subtotal = sale.Subtotal,
             TaxAmount = sale.TaxAmount,
             Total = sale.Total,
-            Status = sale.State.ToString(),
+            State = sale.State,
             Items = sale.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,

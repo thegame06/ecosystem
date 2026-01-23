@@ -8,7 +8,8 @@ import {
     ArrowUpRight,
     TrendingUp,
     Eye,
-    FileText
+    FileText,
+    Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { saleService } from '../../services/saleService';
@@ -86,6 +87,46 @@ const SalesListPage: React.FC = () => {
             refresh();
         } catch (err) {
             toast.error('Error al generar la factura');
+        }
+    };
+
+    const handleDownloadPdf = async (saleId: string) => {
+        try {
+            // Get invoice for this sale
+            const invoiceResponse = await saleService.getInvoice(saleId);
+            if (!invoiceResponse.data) {
+                toast.error('No se encontró factura para esta venta');
+                return;
+            }
+
+            const invoice = invoiceResponse.data;
+            const response = await invoiceService.downloadPdf(invoice.id);
+
+            // Extract filename from Content-Disposition header if available
+            const contentDisposition = response.headers?.['content-disposition'];
+            let filename = `Factura_${invoice.number}.pdf`; // Fallback
+
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1].replace(/['"]/g, '');
+                }
+            }
+
+            // Create download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            toast.success('PDF descargado exitosamente');
+        } catch (err) {
+            console.error('Error downloading PDF:', err);
+            toast.error('Error al descargar el PDF');
         }
     };
 
@@ -214,8 +255,8 @@ const SalesListPage: React.FC = () => {
                                     </div>
                                 </td>
                                 <td className="px-8 py-6 text-center">
-                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border-2 ${COMMERCIAL_STATE_COLORS[sale.state]}`}>
-                                        {COMMERCIAL_STATE_LABELS[sale.state]}
+                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border-2 ${COMMERCIAL_STATE_COLORS[sale.state] || 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                                        {COMMERCIAL_STATE_LABELS[sale.state] || 'Desconocido'}
                                     </span>
                                 </td>
                                 <td className="px-8 py-6 text-right font-black text-slate-900 text-lg">
@@ -236,6 +277,15 @@ const SalesListPage: React.FC = () => {
                                             title="Generar Factura"
                                         >
                                             <FileText size={20} />
+                                        </button>
+                                    )}
+                                    {sale.state >= CommercialState.INVOICED && (
+                                        <button
+                                            onClick={() => handleDownloadPdf(sale.id)}
+                                            className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-emerald-600 transition-all border border-transparent hover:border-slate-200"
+                                            title="Descargar PDF"
+                                        >
+                                            <Download size={20} />
                                         </button>
                                     )}
                                 </td>

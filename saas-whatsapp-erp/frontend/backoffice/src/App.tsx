@@ -6,6 +6,7 @@ import ProductsPage from './pages/Products/ProductsPage';
 import CustomersPage from './pages/Customers/CustomersPage';
 import SalesPage from './pages/Sales/SalesPage';
 import SalesListPage from './pages/Sales/SalesListPage';
+import InvoicesPage from './pages/Invoices/InvoicesPage';
 import SettingsPage from './pages/Settings/SettingsPage';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
@@ -35,7 +36,7 @@ function App() {
           <Route path="pos" element={<SalesPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="products" element={<ProductsPage />} />
-          <Route path="invoices" element={<div>Invoices (Coming Soon)</div>} />
+          <Route path="invoices" element={<InvoicesPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

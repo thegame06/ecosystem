@@ -52,6 +52,18 @@ export const saleService = {
     },
 
     /**
+     * Actualizar venta (solo si no está facturada)
+     */
+    update: async (id: string, data: CreateSaleRequest): Promise<SaleResponse> => {
+        try {
+            const response = await api.put<SaleResponse>(`/sales/${id}`, data);
+            return response.data;
+        } catch (error) {
+            throw parseSaleError(error);
+        }
+    },
+
+    /**
      * Obtener factura de una venta
      */
     getInvoice: async (id: string) => {

@@ -64,8 +64,23 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, saleId, cu
             const response = await invoiceService.create(saleId);
             setInvoice(response.data);
             setStep('generated');
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+
+            // If invoice already exists (409 Conflict), try to load it
+            if (err.response?.status === 409 || err.message?.includes('already exists')) {
+                try {
+                    const existingInvoice = await saleService.getInvoice(saleId);
+                    if (existingInvoice.data) {
+                        setInvoice(existingInvoice.data);
+                        setStep('generated');
+                        return;
+                    }
+                } catch (loadErr) {
+                    console.error('Error loading existing invoice:', loadErr);
+                }
+            }
+
             alert('Error al generar la factura. Verifique los límites de su plan.');
         } finally {
             setIsGenerating(false);
@@ -91,15 +106,30 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, saleId, cu
         if (!invoice) return;
         try {
             const response = await invoiceService.downloadPdf(invoice.id);
+
+            // Extract filename from Content-Disposition header if available
+            const contentDisposition = response.headers?.['content-disposition'];
+            let filename = `Factura_${invoice.number}.pdf`; // Fallback
+
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1].replace(/['"]/g, '');
+                }
+            }
+
+            // Create download
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `factura-${invoice.number}.pdf`);
+            link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
             link.remove();
+            window.URL.revokeObjectURL(url); // Clean up
         } catch (err) {
-            console.error(err);
+            console.error('Error downloading PDF:', err);
+            alert('Error al descargar el PDF. Por favor intente nuevamente.');
         }
     };
 

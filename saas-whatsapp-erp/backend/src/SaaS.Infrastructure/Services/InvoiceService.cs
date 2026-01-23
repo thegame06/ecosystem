@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.OData.Query;
 using SaaS.Application.DTOs.Common;
 using SaaS.Application.DTOs.Invoices;
@@ -15,19 +16,28 @@ public class InvoiceService : IInvoiceService
     private readonly ICustomerRepository _customerRepository;
     private readonly IWhatsAppProvider _whatsappProvider;
     private readonly IWhatsAppNumberRepository _whatsappNumberRepository;
+    private readonly IPdfGenerator _pdfGenerator;
+    private readonly ILogger<InvoiceService> _logger;
+    private readonly IMongoRepository<Company> _companyRepository;
 
     public InvoiceService(
         IInvoiceRepository invoiceRepository,
         ISaleRepository saleRepository,
         ICustomerRepository customerRepository,
         IWhatsAppProvider whatsappProvider,
-        IWhatsAppNumberRepository whatsappNumberRepository)
+        IWhatsAppNumberRepository whatsappNumberRepository,
+        IPdfGenerator pdfGenerator,
+        IMongoRepository<Company> companyRepository,
+        ILogger<InvoiceService> logger)
     {
         _invoiceRepository = invoiceRepository;
         _saleRepository = saleRepository;
         _customerRepository = customerRepository;
         _whatsappProvider = whatsappProvider;
         _whatsappNumberRepository = whatsappNumberRepository;
+        _pdfGenerator = pdfGenerator;
+        _companyRepository = companyRepository;
+        _logger = logger;
     }
 
     public async Task<ResponsePagination<InvoiceResponse>> SearchAsync(
@@ -131,6 +141,7 @@ public class InvoiceService : IInvoiceService
         };
 
         var created = await _invoiceRepository.CreateAsync(invoice);
+        _logger.LogInformation("Invoice created: {InvoiceId} for Sale: {SaleId}, Company: {CompanyId}", created.Id, sale.Id, companyId);
 
         // Actualizar estado de la venta
         sale.State = CommercialState.INVOICED;
@@ -183,11 +194,28 @@ public class InvoiceService : IInvoiceService
         return MapToResponse(updated);
     }
 
-    public Task<byte[]?> GeneratePdfAsync(string id, string companyId)
+    public async Task<byte[]?> GeneratePdfAsync(string id, string companyId)
     {
-        // Placeholder para el PDF de la factura
-        // En una implementación real usaríamos iText7 o QuestPDF
-        return Task.FromResult<byte[]?>(new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 }); // PDF Header
+        // Load invoice
+        var invoice = await _invoiceRepository.GetByIdAsync(id);
+        if (invoice == null || invoice.CompanyId != companyId)
+        {
+            _logger.LogWarning("PDF Generation failed: Invoice {InvoiceId} not found or company mismatch {CompanyId}", id, companyId);
+            return null;
+        }
+
+        // Load company
+        var company = await _companyRepository.GetByIdAsync(companyId);
+        if (company == null)
+            return null;
+
+        // Load customer
+        var customer = await _customerRepository.GetByIdAsync(invoice.CustomerId);
+        if (customer == null)
+            return null;
+
+        // Generate PDF - NO RECALCULATION (critical rule from pricing_calculation_rules.md)
+        return _pdfGenerator.GenerateInvoicePdf(invoice, company, customer);
     }
 
     public async Task SendWhatsAppAsync(string id, string companyId)

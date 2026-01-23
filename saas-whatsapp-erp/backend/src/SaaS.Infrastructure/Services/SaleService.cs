@@ -53,7 +53,7 @@ public class SaleService : ISaleService
             Subtotal = sale.Subtotal,
             TaxAmount = sale.TaxAmount,
             Total = sale.Total,
-            Status = sale.State.ToString(),
+            State = sale.State,
             PaymentMethod = sale.PaymentMethod,
             CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
@@ -331,7 +331,7 @@ public class SaleService : ISaleService
             Subtotal = sale.Subtotal,
             TaxAmount = sale.TaxAmount,
             Total = sale.Total,
-            Status = sale.State.ToString(),
+            State = sale.State,
             PaymentMethod = sale.PaymentMethod,
             CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
