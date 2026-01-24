@@ -32,6 +32,11 @@ public class CompanyRepository : ICompanyRepository
         return await _companies.Find(c => c.Id == id).FirstOrDefaultAsync();
     }
 
+    public async Task<List<Company>> GetAllAsync()
+    {
+        return await _companies.Find(_ => true).ToListAsync();
+    }
+
     public async Task<Company?> GetByPhoneNumberIdAsync(string phoneNumberId)
     {
         return await _companies.Find(c => c.WhatsAppSettings != null && c.WhatsAppSettings.PhoneNumberId == phoneNumberId).FirstOrDefaultAsync();

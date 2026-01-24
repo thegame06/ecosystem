@@ -7,6 +7,7 @@ public interface ICompanyRepository
 {
     Task<Company> CreateAsync(Company company);
     Task<Company?> GetByIdAsync(string id);
+    Task<List<Company>> GetAllAsync();
     Task<Company?> GetByPhoneNumberIdAsync(string phoneNumberId);
     Task UpdateAsync(Company company);
     Task UpdatePlanAsync(string companyId, PlanType plan);
