@@ -10,6 +10,7 @@ import InvoiceModal from '../../components/WhatsApp/InvoiceModal';
 
 const ConversationsPage: React.FC = () => {
     const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [messages, setMessages] = useState<any[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -48,8 +49,26 @@ const ConversationsPage: React.FC = () => {
     useEffect(() => {
         if (selectedId) {
             fetchCustomer(selectedId);
+            fetchMessages(selectedId);
+
+            // Poll messages for active conversation
+            const interval = setInterval(() => fetchMessages(selectedId), 3000);
+            return () => clearInterval(interval);
         }
     }, [selectedId]);
+
+    const fetchMessages = async (id: string) => {
+        try {
+            const response = await conversationService.getMessages(id);
+            // Sort by timestamp desc because we use flex-col-reverse
+            const sorted = response.data.sort((a: any, b: any) =>
+                new Date(b.messageTimestamp).getTime() - new Date(a.messageTimestamp).getTime()
+            );
+            setMessages(sorted);
+        } catch (err) {
+            console.error('Error fetching messages', err);
+        }
+    };
 
     const fetchCustomer = async (id: string) => {
         try {
@@ -210,35 +229,35 @@ const ConversationsPage: React.FC = () => {
                         </div>
 
                         {/* Messages Area */}
-                        <div className="flex-1 bg-slate-50/50 p-8 overflow-y-auto space-y-6 relative">
+                        <div className="flex-1 bg-slate-50/50 p-8 overflow-y-auto space-y-6 relative flex flex-col-reverse">
                             {/* Simulated patterns */}
                             <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                                 style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }}>
                             </div>
 
-                            <div className="flex justify-center my-4">
-                                <span className="px-4 py-1.5 rounded-full bg-slate-200/50 text-slate-500 text-[10px] font-black uppercase tracking-widest">Hoy</span>
-                            </div>
-
-                            {/* Real Last Message */}
-                            <div className="flex justify-start">
-                                <div className="group space-y-1">
-                                    <div className="max-w-md bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 group-hover:shadow-md transition-shadow">
-                                        <p className="text-slate-800 text-sm leading-relaxed">
-                                            {selectedConversation.lastMessage || "¡Hola! Estoy interesado en contratar sus servicios."}
-                                        </p>
-                                    </div>
-                                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 ml-1">
-                                        {new Date(selectedConversation.lastActivityAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        <CheckCircle2 size={12} className="text-primary-500" />
-                                    </span>
+                            {messages.length === 0 ? (
+                                <div className="flex justify-center my-10">
+                                    <span className="text-slate-400 text-sm italic">No hay mensajes aún</span>
                                 </div>
-                            </div>
-
-                            {/* Simulated historical to fill space but clearly different */}
-                            <div className="flex justify-center opacity-40 italic text-xs text-slate-400 py-4">
-                                Fin del historial reciente
-                            </div>
+                            ) : (
+                                messages.map((msg) => (
+                                    <div key={msg.id} className={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`group space-y-1 max-w-[80%]`}>
+                                            <div className={`p-4 rounded-2xl shadow-sm border text-sm leading-relaxed
+                                                ${msg.fromMe
+                                                    ? 'bg-primary-600 text-white rounded-tr-none border-primary-500'
+                                                    : 'bg-white text-slate-800 rounded-tl-none border-slate-100 group-hover:shadow-md'
+                                                }`}>
+                                                <p>{msg.content}</p>
+                                            </div>
+                                            <span className={`text-[10px] font-bold text-slate-400 flex items-center gap-1.5 ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
+                                                {new Date(msg.messageTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {msg.fromMe && <CheckCircle2 size={12} className="text-primary-500" />}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
 
                         <div className="p-8 bg-white border-t border-slate-100">

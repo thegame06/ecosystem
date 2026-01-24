@@ -51,6 +51,7 @@ builder.Services.AddSingleton<IProductRepository, ProductRepository>();
 builder.Services.AddSingleton<ISaleRepository, SaleRepository>();
 builder.Services.AddSingleton<IInvoiceRepository, InvoiceRepository>();
 builder.Services.AddSingleton<IConversationRepository, ConversationRepository>();
+builder.Services.AddSingleton<IConversationMessageRepository, ConversationMessageRepository>();
 builder.Services.AddSingleton<IUsageCountersRepository, UsageCountersRepository>();
 builder.Services.AddSingleton<IWhatsAppNumberRepository, WhatsAppNumberRepository>();
 
@@ -94,6 +95,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
+builder.Services.AddScoped<IConversationMessageService, SaaS.Infrastructure.Services.ConversationMessageService>();
 builder.Services.AddScoped<IPlanService, PlanService>();
 
 // PDF Generator

@@ -15,10 +15,14 @@ namespace SaaS.Api.Controllers;
 public class ConversationsController : ControllerBase
 {
     private readonly IConversationService _conversationService;
+    private readonly IConversationMessageService _messageService;
 
-    public ConversationsController(IConversationService conversationService)
+    public ConversationsController(
+        IConversationService conversationService,
+        IConversationMessageService messageService)
     {
         _conversationService = conversationService;
+        _messageService = messageService;
     }
 
     private string GetCompanyId()
@@ -85,6 +89,17 @@ public class ConversationsController : ControllerBase
         var result = await _conversationService.SendMessageAsync(id, request.Message, GetCompanyId());
         if (!result) return BadRequest(new { message = "Failed to send message or limit reached" });
         return Ok(new { success = true });
+    }
+
+    [HttpGet("{id}/messages")]
+    public async Task<ActionResult<IEnumerable<ConversationMessageResponse>>> GetMessages(string id)
+    {
+        var companyId = GetCompanyId();
+        // Validate conversation ownership first? Or trust service scopes?
+        // Let's trust service to return empty if not found, but ideally validate.
+        
+        var messages = await _messageService.GetMessagesByConversationAsync(companyId, id);
+        return Ok(messages);
     }
 }
 

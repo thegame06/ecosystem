@@ -13,7 +13,7 @@ public interface IConversationService
     Task<ConversationResponse> CreateAsync(CreateConversationRequest request, string companyId);
     Task<ConversationResponse?> UpdateAsync(string id, UpdateConversationRequest request, string companyId);
     Task<CustomerResponse?> GetCustomerAsync(string conversationId, string companyId);
-    Task HandleIncomingMessageAsync(string companyId, string customerPhone, string message);
+    Task HandleIncomingMessageAsync(string companyId, string customerPhone, string message, string? pushName = null, string? remoteJid = null, string? externalId = null, DateTime? timestamp = null);
     Task<bool> SendMessageAsync(string conversationId, string message, string companyId);
 }
 

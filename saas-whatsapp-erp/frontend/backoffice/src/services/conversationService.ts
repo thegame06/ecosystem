@@ -13,5 +13,8 @@ export const conversationService = {
 
     sendMessage: (id: string, message: string) =>
         api.post<{ success: boolean }>(`/conversations/${id}/messages`, { message }),
+
+    getMessages: (id: string) => api.get<any[]>(`/conversations/${id}/messages`),
 };
+
 

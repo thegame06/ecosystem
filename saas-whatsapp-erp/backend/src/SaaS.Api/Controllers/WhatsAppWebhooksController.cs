@@ -152,7 +152,8 @@ public class WhatsAppWebhooksController : ControllerBase
     [HttpPost("byon/{companyId}")]
     public async Task<IActionResult> ReceiveMessageByon(string companyId, [FromBody] JsonElement payload)
     {
-        _logger.LogInformation("[Webhook BYON] Message received for company {CompanyId}", companyId);
+        var rawText = payload.ToString();
+        _logger.LogInformation("[Webhook BYON] RAW PAYLOAD ({CompanyId}): {Payload}", companyId, rawText);
 
         try
         {
@@ -240,9 +241,26 @@ public class WhatsAppWebhooksController : ControllerBase
 
             if (!string.IsNullOrEmpty(from) && !string.IsNullOrEmpty(text))
             {
+                // Extract additional tracking info
+                string? pushName = null;
+                string? externalId = null;
+                string? remoteJid = null;
+                DateTime? timestamp = null;
+
+                if (payload.TryGetProperty("data", out var d))
+                {
+                    if (d.TryGetProperty("pushName", out var pn)) pushName = pn.GetString();
+                    if (d.TryGetProperty("key", out var k) && k.TryGetProperty("id", out var id)) externalId = id.GetString();
+                    if (d.TryGetProperty("key", out var z) && z.TryGetProperty("remoteJid", out var rJid)) remoteJid = rJid.GetString();
+                    if (d.TryGetProperty("messageTimestamp", out var ts) && ts.TryGetInt64(out var tsVal)) 
+                    {
+                        timestamp = DateTimeOffset.FromUnixTimeSeconds(tsVal).UtcDateTime;
+                    }
+                }
+
                 // Ensure we handle international format correctly
-                await _conversationService.HandleIncomingMessageAsync(companyId, from, text);
-                _logger.LogInformation("[Webhook BYON] ✅ Message processed: {From}: {Text}", from, text);
+                await _conversationService.HandleIncomingMessageAsync(companyId, from, text, pushName, remoteJid, externalId, timestamp);
+                _logger.LogInformation("[Webhook BYON] ✅ Message processed from {PushName} ({From}): {Text}", pushName ?? "Unknown", from, text);
             }
 
             return Ok();

@@ -13,16 +13,20 @@ public class ConversationService : IConversationService
     private readonly IConversationRepository _conversationRepository;
     private readonly ICustomerRepository _customerRepository;
     private readonly IWhatsAppProvider _whatsAppProvider;
+
     private readonly IPlanService _planService;
+    private readonly IConversationMessageService _conversationMessageService;
 
     public ConversationService(
         IConversationRepository conversationRepository,
         ICustomerRepository customerRepository,
+        IConversationMessageService conversationMessageService,
         IWhatsAppProvider whatsAppProvider,
         IPlanService planService)
     {
         _conversationRepository = conversationRepository;
         _customerRepository = customerRepository;
+        _conversationMessageService = conversationMessageService;
         _whatsAppProvider = whatsAppProvider;
         _planService = planService;
     }
@@ -184,51 +188,90 @@ public class ConversationService : IConversationService
         };
     }
 
-    public async Task HandleIncomingMessageAsync(string companyId, string fromPhone, string text)
+    public async Task HandleIncomingMessageAsync(string companyId, string fromPhone, string text, string? pushName = null, string? remoteJid = null, string? externalId = null, DateTime? timestamp = null)
     {
-        // 1. Cargar o crear cliente
-        var customer = await _customerRepository.GetByPhoneAsync(companyId, fromPhone);
-        if (customer == null)
+        try 
         {
-            customer = new Customer
+            // 1. Cargar o crear cliente (Identity Resolution)
+            var customer = await _customerRepository.GetByPhoneAsync(companyId, fromPhone);
+            if (customer == null)
             {
-                CompanyId = companyId,
-                Phone = fromPhone,
-                Name = fromPhone, // Fallback
-                CurrentState = CommercialState.LEAD,
-                CreatedAt = DateTime.UtcNow
-            };
-            await _customerRepository.CreateAsync(customer);
-        }
+                var customerName = !string.IsNullOrEmpty(pushName) ? pushName : fromPhone;
+                
+                customer = new Customer 
+                {
+                    CompanyId = companyId,
+                    Phone = fromPhone,
+                    Name = customerName,
+                    CurrentState = CommercialState.LEAD,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _customerRepository.CreateAsync(customer);
+            }
+            else if (customer.Name == customer.Phone && !string.IsNullOrEmpty(pushName))
+            {
+                // Auto-update name if it was just the phone number
+                customer.Name = pushName;
+                await _customerRepository.UpdateAsync(customer);
+            }
 
 
-        // 2. Cargar o crear conversación
-        var conversation = await _conversationRepository.GetByCustomerIdAsync(companyId, customer.Id);
-        if (conversation == null)
-        {
-            conversation = new Conversation
+            // 2. Cargar o crear conversación
+            var conversation = await _conversationRepository.GetByCustomerIdAsync(companyId, customer.Id);
+            if (conversation == null)
             {
-                CompanyId = companyId,
+                conversation = new Conversation
+                {
+                    CompanyId = companyId,
+                    CustomerId = customer.Id,
+                    CustomerPhone = customer.Phone,
+                    LastMessage = text,
+                    LastState = customer.CurrentState,
+                    HasUnreadMessages = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    LastActivityAt = DateTime.UtcNow,
+                    Channel = "WhatsApp",
+                    IsActive = true
+                };
+                await _conversationRepository.CreateAsync(conversation);
+                
+                // Track new conversation
+                await _planService.TrackConsumptionAsync(companyId, "conversations");
+            }
+            else
+            {
+                conversation.LastMessage = text;
+                conversation.HasUnreadMessages = true;
+                conversation.UpdatedAt = DateTime.UtcNow;
+                conversation.LastActivityAt = DateTime.UtcNow;
+                await _conversationRepository.UpdateAsync(conversation);
+            }
+
+            // 3. Guardar Mensaje (Tracking)
+            var msgRequest = new CreateMessageRequest
+            {
+                ConversationId = conversation.Id,
                 CustomerId = customer.Id,
+                ExternalId = externalId,
+                RemoteJid = remoteJid,
+                PushName = pushName,
                 CustomerPhone = customer.Phone,
-                LastMessage = text,
-                LastState = customer.CurrentState,
-                HasUnreadMessages = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                FromMe = false,
+                SenderName = customer.Name,
+                Content = text,
+                Type = MessageType.TEXT,
+                Timestamp = timestamp
             };
-            await _conversationRepository.CreateAsync(conversation);
             
-            // Track new conversation
-            await _planService.TrackConsumptionAsync(companyId, "conversations");
+            await _conversationMessageService.CreateMessageAsync(companyId, msgRequest);
         }
-        else
+        catch (Exception ex)
         {
-            conversation.LastMessage = text;
-            conversation.HasUnreadMessages = true;
-            conversation.UpdatedAt = DateTime.UtcNow;
-            conversation.LastActivityAt = DateTime.UtcNow;
-            await _conversationRepository.UpdateAsync(conversation);
+            // Logging simple via Console para depuración rápida en Docker/Console
+            Console.WriteLine($"[ERROR] HandleIncomingMessageAsync: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+            throw; // Re-throw to see in controller logs too
         }
     }
 
