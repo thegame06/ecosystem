@@ -6,7 +6,9 @@ public interface IWhatsAppProvider
     Task<bool> SendPdfAsync(string companyId, string toNumber, byte[] pdfBytes, string fileName);
     Task<string> GetQrCodeAsync(string companyId);
     Task<bool> IsConnectedAsync(string companyId);
+    Task<bool> LogoutAsync(string companyId);
 }
+
 
 
 

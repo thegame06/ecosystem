@@ -46,6 +46,13 @@ public class WhatsAppProviderDispatcher : IWhatsAppProvider
         return await provider.IsConnectedAsync(companyId);
     }
 
+    public async Task<bool> LogoutAsync(string companyId)
+    {
+        var provider = await GetProviderAsync(companyId);
+        return await provider.LogoutAsync(companyId);
+    }
+
+
 
     private async Task<IWhatsAppProvider> GetProviderAsync(string companyId)
     {

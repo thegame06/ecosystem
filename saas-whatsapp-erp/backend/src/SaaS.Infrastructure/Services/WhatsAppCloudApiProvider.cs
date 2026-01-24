@@ -161,7 +161,10 @@ public class WhatsAppCloudApiProvider : IWhatsAppProvider
         // For Cloud API, we assume it's connected if settings exist and are active
         return true;
     }
+
+    public Task<bool> LogoutAsync(string companyId) => Task.FromResult(true);
 }
+
 
 
 

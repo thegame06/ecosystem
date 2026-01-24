@@ -41,6 +41,8 @@ export const companyService = {
     updateWhatsAppSettings: (data: WhatsAppSettings) => api.put<WhatsAppSettings>('/companies/whatsapp-settings', data),
     getWhatsAppQr: () => api.get<{ qrCode: string }>('/companies/whatsapp-qr'),
     checkWhatsAppStatus: () => api.post<{ isActive: boolean }>('/companies/whatsapp-check'),
+    logoutWhatsApp: () => api.delete('/companies/whatsapp-logout'),
 };
+
 
 

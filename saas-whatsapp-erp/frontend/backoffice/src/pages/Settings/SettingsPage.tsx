@@ -385,10 +385,15 @@ const SettingsPage: React.FC = () => {
                                     {company.whatsAppSettings?.isActive && (
                                         <button
                                             type="button"
-                                            onClick={() => setCompany({
-                                                ...company,
-                                                whatsAppSettings: { ...company.whatsAppSettings, isActive: false }
-                                            })}
+                                            onClick={async () => {
+                                                try {
+                                                    await companyService.logoutWhatsApp();
+                                                    loadCompany(); // Reload state from server
+                                                    setMessage({ type: 'success', text: 'WhatsApp desvinculado correctamente' });
+                                                } catch (e) {
+                                                    setMessage({ type: 'error', text: 'Error al desvincular WhatsApp' });
+                                                }
+                                            }}
                                             className="ml-4 px-3 py-1 bg-white border border-emerald-200 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-tighter hover:bg-emerald-100 transition-colors"
                                         >
                                             Desvincular

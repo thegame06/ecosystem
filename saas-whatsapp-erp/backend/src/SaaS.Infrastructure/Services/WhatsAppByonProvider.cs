@@ -229,7 +229,15 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             value = fullWebhookUrl,
             enabled = true,
             webhook_by_events = false,
-            events = new[] { "MESSAGES_UPSERT", "CONNECTION_UPDATE" }
+            events = new[] 
+            { 
+                "MESSAGES_UPSERT", 
+                "MESSAGES_UPDATE", 
+                "MESSAGES_DELETE", 
+                "SEND_MESSAGE", 
+                "CONNECTION_UPDATE", 
+                "CONTACTS_UPDATE" 
+            }
         };
 
         // Note: Evolution API v1.x uses /webhook/instance/set/{instanceName}
@@ -254,6 +262,33 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         }
 
         return true;
+    }
+
+    public async Task<bool> LogoutAsync(string companyId)
+    {
+        try
+        {
+            var instanceName = $"comp_{companyId}";
+            var url = $"{_baseUrl}/instance/logout/{instanceName}";
+            
+            var request = new HttpRequestMessage(HttpMethod.Delete, url);
+            request.Headers.Add("apikey", _apiKey);
+
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Error logging out instance {Instance}: {Body}", instanceName, errorBody);
+                return false;
+            }
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception during logout for {CompanyId}", companyId);
+            return false;
+        }
     }
 }
 

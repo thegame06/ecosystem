@@ -212,7 +212,25 @@ public class CompaniesController : ControllerBase
         
         return Ok(new { isActive = isConnected });
     }
+
+    [HttpDelete("whatsapp-logout")]
+    public async Task<ActionResult> LogoutWhatsApp()
+    {
+        var companyId = GetCompanyId();
+        await _whatsAppProvider.LogoutAsync(companyId);
+        
+        var company = await _companyRepository.GetByIdAsync(companyId);
+        if (company != null && company.WhatsAppSettings != null)
+        {
+            company.WhatsAppSettings.IsActive = false;
+            await _companyRepository.UpdateAsync(company);
+        }
+        
+        return Ok(new { message = "Logged out successfully" });
+    }
 }
+
+
 
 
 

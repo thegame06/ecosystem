@@ -211,6 +211,13 @@ public class WhatsAppWebhooksController : ControllerBase
                         from = fullJid.Split('@')[0]; // Clean "@s.whatsapp.net"
                     }
 
+                    // Check if it's from me (avoid loops)
+                    if (dataProp.TryGetProperty("key", out var keyProp2) && keyProp2.TryGetProperty("fromMe", out var fromMeProp) && fromMeProp.GetBoolean())
+                    {
+                        _logger.LogInformation("[Webhook BYON] Ignoring message from ME");
+                        return Ok();
+                    }
+
                     // Get message body
                     if (dataProp.TryGetProperty("message", out var msgProp))
                     {
@@ -221,6 +228,10 @@ public class WhatsAppWebhooksController : ControllerBase
                         else if (msgProp.TryGetProperty("extendedTextMessage", out var extProp) && extProp.TryGetProperty("text", out var tProp))
                         {
                             text = tProp.GetString() ?? "";
+                        }
+                        else if (msgProp.TryGetProperty("imageMessage", out var imgProp) && imgProp.TryGetProperty("caption", out var capProp))
+                        {
+                            text = capProp.GetString() ?? "[Imagen]";
                         }
                     }
                 }
