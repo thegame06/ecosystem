@@ -8,24 +8,26 @@ This document defines the **OFFICIAL WhatsApp integration strategy** for the MVP
 
 ---
 
-## 1️⃣ MVP Integration Model
+## 1️⃣ MVP Integration Model (Hybrid Support)
 
-### Technology Used
-- **WhatsApp API (Unofficial)**
-- **NOT WhatsApp Business Cloud API**
-- **NOT WhatsApp Business API (Official)**
+### Supported Models
+1. **BYON (Bring Your Own Number / Unofficial)**
+   - **Status**: Primary MVP method.
+   - **Technology**: Unofficial WhatsApp API (QR Code based).
+   - **Target**: Starter / Pro plans.
+   - **Benefit**: Zero loss of WhatsApp App on the phone, no Meta verification needed.
 
-### Integration Model
-- **BYON (Bring Your Own Number)**
-- The WhatsApp number belongs to the **customer** (the company using the SaaS)
-- The SaaS system connects to the customer's WhatsApp number
-- The customer is responsible for the WhatsApp account
+2. **WhatsApp Business Cloud API (Official)**
+   - **Status**: Advanced / Enterprise method.
+   - **Technology**: Official Meta Graph API.
+   - **Target**: Pro / Growth plans.
+   - **Benefit**: High stability, official support, but requires dedicated number.
 
-### Why This Model?
-- **Zero WhatsApp infrastructure costs** for the SaaS provider
-- **Faster MVP launch** (no Meta Business verification required)
-- **Lower operational complexity**
-- **Customer owns their communication channel**
+### Integration Strategy
+- **Transparency**: The SaaS platform remains agnostic. Conversations and metrics work the same way regardless of the connection method.
+- **Backend Routing**: The system selects the appropriate provider based on the Company's configuration.
+- **Unified Webhooks**: Provider-specific webhooks are mapped to a internal unified message format.
+
 
 ---
 

@@ -1,0 +1,18 @@
+services:
+  evolution_api:
+    image: atendai/evolution-api:v1.8.2
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_URL=http://localhost:8080
+      - AUTHENTICATION_API_KEY=SaaS_Super_Secret_Token_2026
+      - DELAY_MESSAGES=true
+      - DATABASE_ENABLED=false
+      # In v1, this is usually passed via the create instance call or global config if supported
+    volumes:
+      - evolution_instances:/evolution/instances
+
+volumes:
+  evolution_instances:

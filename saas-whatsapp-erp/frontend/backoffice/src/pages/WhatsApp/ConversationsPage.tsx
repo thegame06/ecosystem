@@ -19,11 +19,14 @@ const ConversationsPage: React.FC = () => {
     const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
     const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
     const [activeSaleId, setActiveSaleId] = useState<string | null>(null);
+    const [messageInput, setMessageInput] = useState('');
+    const [isSendingMessage, setIsSendingMessage] = useState(false);
 
     useEffect(() => {
         fetchConversations();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
 
     const fetchConversations = async () => {
         try {
@@ -70,6 +73,23 @@ const ConversationsPage: React.FC = () => {
         } catch (err) {
             console.error('Error fetching customer or sale', err);
             setActiveSaleId(null);
+        }
+    };
+
+    const handleSendMessage = async () => {
+        if (!selectedId || !messageInput.trim() || isSendingMessage) return;
+
+        setIsSendingMessage(true);
+        try {
+            await conversationService.sendMessage(selectedId, messageInput.trim());
+            setMessageInput('');
+            // Optional: refresh conversations to show last message
+            fetchConversations();
+        } catch (err) {
+            console.error('Error sending message', err);
+            alert('Error al enviar el mensaje. Verifique su conexión y saldo.');
+        } finally {
+            setIsSendingMessage(false);
         }
     };
 
@@ -252,10 +272,26 @@ const ConversationsPage: React.FC = () => {
                                     <input
                                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-medium"
                                         placeholder="Escribe un mensaje aquí..."
+                                        value={messageInput}
+                                        onChange={(e) => setMessageInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendMessage();
+                                            }
+                                        }}
                                     />
                                 </div>
-                                <button className="w-14 h-14 bg-primary-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200 hover:bg-primary-700 hover:scale-105 active:scale-95 transition-all">
-                                    <Send size={24} />
+                                <button
+                                    onClick={handleSendMessage}
+                                    disabled={isSendingMessage || !messageInput.trim()}
+                                    className="w-14 h-14 bg-primary-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200 hover:bg-primary-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                                >
+                                    {isSendingMessage ? (
+                                        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    ) : (
+                                        <Send size={24} />
+                                    )}
                                 </button>
                             </div>
                         </div>

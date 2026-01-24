@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Building2, MessageSquare, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { companyService, CompanyInfo } from '../../services/companyService';
+import { WhatsAppProviderType } from '../../types/enums';
 import Button from '../../components/Common/Button';
 import Input from '../../components/Common/Input';
 
@@ -9,7 +10,33 @@ const SettingsPage: React.FC = () => {
     const [company, setCompany] = useState<CompanyInfo | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+    const [qrCode, setQrCode] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    useEffect(() => {
+        let interval: any;
+
+        const isUnofficial = company?.whatsAppSettings?.providerType === WhatsAppProviderType.Unofficial;
+
+        if (activeTab === 'whatsapp' && company && !company.whatsAppSettings?.isActive && isUnofficial) {
+            interval = setInterval(async () => {
+                try {
+                    const response = await companyService.checkWhatsAppStatus();
+                    if (response.data.isActive) {
+                        loadCompany(); // Refresh everything
+                        setQrCode(null);
+                        setMessage({ type: 'success', text: '¡WhatsApp vinculado con éxito!' });
+                        setTimeout(() => setMessage(null), 5000);
+                    }
+                } catch (e) {
+                    // Ignore polling errors
+                }
+            }, 5000);
+        }
+
+        return () => clearInterval(interval);
+    }, [activeTab, company?.whatsAppSettings?.isActive, company?.whatsAppSettings?.providerType]);
 
     useEffect(() => {
         loadCompany();
@@ -154,87 +181,237 @@ const SettingsPage: React.FC = () => {
                 )}
 
                 {activeTab === 'whatsapp' && company && (
-                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl p-8 space-y-6">
-                        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-3xl flex gap-4">
-                            <AlertCircle className="text-blue-600 shrink-0" size={24} />
-                            <div>
-                                <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider">Conexión WhatsApp Cloud API (Oficial)</h4>
-                                <p className="text-xs text-blue-700 mt-2 leading-relaxed font-medium">
-                                    Esta integración conecta tu empresa directamente con los servidores de Meta.
-                                    <br />
-                                    <strong className="font-black">⚠️ IMPORTANTE:</strong> Requiere un número telefónico dedicado. Si conectas un número que ya usas en tu celular, <strong className="font-black">la App de WhatsApp dejará de funcionar en tu dispositivo</strong>.
-                                </p>
-                                <a
-                                    href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs font-black text-blue-800 hover:text-blue-950 underline mt-3 inline-block"
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl p-8 space-y-8">
+                        {/* Selector de Proveedor */}
+                        <div className="space-y-4">
+                            <label className="block text-sm font-black text-slate-700 uppercase tracking-wider text-[10px]">Método de Conexión</label>
+                            <div className="flex flex-wrap gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setCompany({
+                                        ...company,
+                                        whatsAppSettings: { ...company.whatsAppSettings, providerType: WhatsAppProviderType.Unofficial }
+                                    })}
+                                    className={`flex-1 min-w-[200px] p-6 rounded-3xl border-2 transition-all text-left ${company.whatsAppSettings?.providerType === WhatsAppProviderType.Unofficial
+                                        ? 'border-primary-500 bg-primary-50 shadow-lg shadow-primary-100'
+                                        : 'border-slate-100 bg-slate-50 hover:border-slate-200'
+                                        }`}
                                 >
-                                    📚 ¿Cómo obtener mis credenciales? (Guía Oficial)
-                                </a>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className={`p-2 rounded-xl ${company.whatsAppSettings?.providerType === WhatsAppProviderType.Unofficial ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                            <MessageSquare size={20} />
+                                        </div>
+                                        <span className="font-black text-slate-900">Conexión QR (Rápida)</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Recomendado para PYMEs. Usa tu número actual sin perder la App.</p>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setCompany({
+                                        ...company,
+                                        whatsAppSettings: { ...company.whatsAppSettings, providerType: WhatsAppProviderType.Official }
+                                    })}
+                                    className={`flex-1 min-w-[200px] p-6 rounded-3xl border-2 transition-all text-left ${company.whatsAppSettings?.providerType === WhatsAppProviderType.Official
+                                        ? 'border-primary-500 bg-primary-50 shadow-lg shadow-primary-100'
+                                        : 'border-slate-100 bg-slate-50 hover:border-slate-200'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className={`p-2 rounded-xl ${company.whatsAppSettings?.providerType === WhatsAppProviderType.Official ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                            <Building2 size={20} />
+                                        </div>
+                                        <span className="font-black text-slate-900">Cloud API (Oficial)</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Para empresas escalables. Requiere verificación de Meta y número dedicado.</p>
+                                </button>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Input
-                                label="Phone Number ID"
-                                value={company.whatsAppSettings?.phoneNumberId || ''}
-                                onChange={(e) => setCompany({
-                                    ...company,
-                                    whatsAppSettings: { ...company.whatsAppSettings, phoneNumberId: e.target.value }
-                                })}
-                            />
-                            <Input
-                                label="Business Account ID"
-                                value={company.whatsAppSettings?.businessAccountId || ''}
-                                onChange={(e) => setCompany({
-                                    ...company,
-                                    whatsAppSettings: { ...company.whatsAppSettings, businessAccountId: e.target.value }
-                                })}
-                            />
-                            <div className="md:col-span-2">
-                                <Input
-                                    label="System User Access Token"
-                                    type="password"
-                                    value={company.whatsAppSettings?.accessToken || ''}
-                                    onChange={(e) => setCompany({
-                                        ...company,
-                                        whatsAppSettings: { ...company.whatsAppSettings, accessToken: e.target.value }
-                                    })}
-                                />
-                            </div>
-                            <Input
-                                label="Webhook Verify Token"
-                                value={company.whatsAppSettings?.verifyToken || ''}
-                                onChange={(e) => setCompany({
-                                    ...company,
-                                    whatsAppSettings: { ...company.whatsAppSettings, verifyToken: e.target.value }
-                                })}
-                            />
-                            <div className="space-y-2">
-                                <label className="block text-sm font-black text-slate-700 uppercase tracking-wider text-[10px]">Estado de WhatsApp</label>
-                                <div className="flex items-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <input
-                                        id="whatsapp-active"
-                                        type="checkbox"
-                                        className="w-5 h-5 rounded-lg border-slate-300 text-primary-600 focus:ring-primary-500 transition-all"
-                                        checked={company.whatsAppSettings?.isActive || false}
+                        {company.whatsAppSettings?.providerType === WhatsAppProviderType.Official ? (
+                            <div className="space-y-6 animate-fade-in">
+                                <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-3xl flex gap-4">
+                                    <AlertCircle className="text-blue-600 shrink-0" size={24} />
+                                    <div>
+                                        <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider">Configuración Cloud API (Meta)</h4>
+                                        <p className="text-xs text-blue-700 mt-2 leading-relaxed font-medium">
+                                            Esta integración conecta tu empresa directamente con los servidores de Meta.
+                                            <br />
+                                            <strong className="font-black">⚠️ IMPORTANTE:</strong> Requiere un número telefónico dedicado. Si conectas un número que ya usas en tu celular, <strong className="font-black">la App de WhatsApp dejará de funcionar en tu dispositivo</strong>.
+                                        </p>
+                                        <a
+                                            href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs font-black text-blue-800 hover:text-blue-950 underline mt-3 inline-block"
+                                        >
+                                            📚 ¿Cómo obtener mis credenciales? (Guía Oficial)
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <Input
+                                        label="Phone Number ID"
+                                        value={company.whatsAppSettings?.phoneNumberId || ''}
                                         onChange={(e) => setCompany({
                                             ...company,
-                                            whatsAppSettings: { ...company.whatsAppSettings, isActive: e.target.checked }
+                                            whatsAppSettings: { ...company.whatsAppSettings, phoneNumberId: e.target.value }
                                         })}
                                     />
-                                    <label htmlFor="whatsapp-active" className="ml-3 block text-xs font-black text-slate-600 uppercase tracking-wider">
-                                        WhatsApp Activo
-                                    </label>
+                                    <Input
+                                        label="Business Account ID"
+                                        value={company.whatsAppSettings?.businessAccountId || ''}
+                                        onChange={(e) => setCompany({
+                                            ...company,
+                                            whatsAppSettings: { ...company.whatsAppSettings, businessAccountId: e.target.value }
+                                        })}
+                                    />
+                                    <div className="md:col-span-2">
+                                        <Input
+                                            label="System User Access Token"
+                                            type="password"
+                                            value={company.whatsAppSettings?.accessToken || ''}
+                                            onChange={(e) => setCompany({
+                                                ...company,
+                                                whatsAppSettings: { ...company.whatsAppSettings, accessToken: e.target.value }
+                                            })}
+                                        />
+                                    </div>
+                                    <Input
+                                        label="Webhook Verify Token"
+                                        value={company.whatsAppSettings?.verifyToken || ''}
+                                        onChange={(e) => setCompany({
+                                            ...company,
+                                            whatsAppSettings: { ...company.whatsAppSettings, verifyToken: e.target.value }
+                                        })}
+                                    />
                                 </div>
-                                <p className="text-xs text-slate-500 mt-2 font-medium">
-                                    Activa esta opción solo cuando hayas configurado correctamente todas las credenciales
-                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6 animate-fade-in">
+                                <div className="bg-emerald-50 border-2 border-emerald-200 p-8 rounded-[2rem] text-center space-y-6 relative overflow-hidden">
+                                    <div className="relative z-10">
+                                        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-[1.5rem] flex items-center justify-center mx-auto shadow-inner mb-4">
+                                            <MessageSquare size={40} />
+                                        </div>
+                                        <h3 className="text-2xl font-black text-emerald-900">Conexión via Código QR</h3>
+                                        <p className="text-sm text-emerald-700 max-w-sm mx-auto font-medium leading-relaxed">
+                                            Escanea el código con tu WhatsApp (Dispositivos Vinculados) para conectar este sistema con tu número personal.
+                                        </p>
+
+                                        <div className="mt-8 flex flex-col items-center">
+                                            {isGeneratingQR ? (
+                                                <div className="w-64 h-64 bg-white rounded-3xl border-2 border-emerald-100 flex flex-col items-center justify-center gap-4 animate-pulse shadow-xl shadow-emerald-200/50">
+                                                    <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
+                                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Generando sesión...</span>
+                                                </div>
+                                            ) : qrCode ? (
+                                                <div className="relative group flex flex-col items-center">
+                                                    <div className="absolute -inset-4 bg-emerald-500 blur-2xl opacity-10 animate-pulse"></div>
+                                                    <div className="w-64 h-64 bg-white p-4 rounded-3xl border-2 border-emerald-500 shadow-2xl relative">
+                                                        <img
+                                                            src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
+                                                            alt="WhatsApp QR Code"
+                                                            className="w-full h-full object-contain"
+                                                        />
+                                                    </div>
+                                                    <p className="mt-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-100 px-3 py-1 rounded-full">Escanea ahora con tu WhatsApp</p>
+                                                    <button
+                                                        onClick={() => setQrCode(null)}
+                                                        className="mt-2 text-[10px] text-emerald-600 font-black uppercase tracking-widest hover:underline"
+                                                    >
+                                                        Generar Nuevo Código
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-950/20 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                                                    onClick={async () => {
+                                                        setIsGeneratingQR(true);
+                                                        try {
+                                                            const response = await companyService.getWhatsAppQr();
+                                                            setQrCode(response.data.qrCode);
+                                                        } catch (err: any) {
+                                                            alert('Error: ' + (err.response?.data?.message || 'No se pudo generar el QR. Verifique el motor de WhatsApp.'));
+                                                        } finally {
+                                                            setIsGeneratingQR(false);
+                                                        }
+                                                    }}
+                                                >
+                                                    <MessageSquare size={18} />
+                                                    Vincular Nuevo Dispositivo
+                                                </button>
+                                            )}
+
+                                        </div>
+                                    </div>
+
+                                    {/* Decoration */}
+                                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-100 rounded-full opacity-50 blur-3xl"></div>
+                                    <div className="absolute -top-10 -left-10 w-40 h-40 bg-emerald-100 rounded-full opacity-50 blur-3xl"></div>
+                                </div>
+                            </div>
+                        )}
+
+
+                        <div className="pt-6 border-t border-slate-100">
+                            <div className="space-y-4 max-w-md">
+                                <label className="block text-sm font-black text-slate-700 uppercase tracking-wider text-[10px]">Estado de Conexión</label>
+
+                                <div className={`flex items-center p-6 rounded-[2rem] border-2 transition-all ${company.whatsAppSettings?.isActive
+                                    ? 'bg-emerald-50 border-emerald-100 shadow-inner'
+                                    : 'bg-slate-50 border-slate-100'}`}>
+
+                                    <div className="relative mr-4">
+                                        <div className={`w-4 h-4 rounded-full ${company.whatsAppSettings?.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                                        {company.whatsAppSettings?.isActive && (
+                                            <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-75"></div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <span className={`block text-xs font-black uppercase tracking-widest ${company.whatsAppSettings?.isActive ? 'text-emerald-700' : 'text-slate-500'}`}>
+                                            {company.whatsAppSettings?.isActive ? 'Dispositivo Conectado' : 'Esperando Vinculación'}
+                                        </span>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                                            {company.whatsAppSettings?.isActive
+                                                ? 'Tu sistema está listo para enviar mensajes reales.'
+                                                : 'El sistema usará MOCK hasta que vincules un dispositivo.'}
+                                        </p>
+                                    </div>
+
+                                    {company.whatsAppSettings?.isActive && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setCompany({
+                                                ...company,
+                                                whatsAppSettings: { ...company.whatsAppSettings, isActive: false }
+                                            })}
+                                            className="ml-4 px-3 py-1 bg-white border border-emerald-200 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-tighter hover:bg-emerald-100 transition-colors"
+                                        >
+                                            Desvincular
+                                        </button>
+                                    )}
+                                </div>
+
+                                {!company.whatsAppSettings?.isActive && company.whatsAppSettings?.providerType === WhatsAppProviderType.Unofficial && (
+                                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                                        <div className="flex gap-3">
+                                            <AlertCircle className="text-amber-500 shrink-0" size={16} />
+                                            <p className="text-[9px] font-black text-amber-700 uppercase leading-relaxed tracking-tight">
+                                                Asegúrate de tener el Túnel Cloudflare activo y configurado en <code className="bg-amber-100 px-1 rounded">appsettings.json</code> para que la vinculación se detecte automáticamente.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
+
                     </div>
                 )}
+
 
                 <div className="flex justify-end">
                     <button

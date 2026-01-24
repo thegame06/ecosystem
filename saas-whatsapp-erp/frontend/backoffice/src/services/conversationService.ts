@@ -10,4 +10,8 @@ export const conversationService = {
     getById: (id: string) => api.get<Conversation>(`/conversations/${id}`),
 
     getCustomer: (id: string) => api.get<Customer>(`/conversations/${id}/customer`),
+
+    sendMessage: (id: string, message: string) =>
+        api.post<{ success: boolean }>(`/conversations/${id}/messages`, { message }),
 };
+

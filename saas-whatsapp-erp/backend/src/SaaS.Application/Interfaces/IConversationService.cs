@@ -14,4 +14,6 @@ public interface IConversationService
     Task<ConversationResponse?> UpdateAsync(string id, UpdateConversationRequest request, string companyId);
     Task<CustomerResponse?> GetCustomerAsync(string conversationId, string companyId);
     Task HandleIncomingMessageAsync(string companyId, string customerPhone, string message);
+    Task<bool> SendMessageAsync(string conversationId, string message, string companyId);
 }
+

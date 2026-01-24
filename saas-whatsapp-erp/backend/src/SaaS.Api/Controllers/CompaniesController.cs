@@ -13,11 +13,16 @@ public class CompaniesController : ControllerBase
 {
     private readonly ICompanyRepository _companyRepository;
     private readonly IUsageCountersRepository _usageRepository;
+    private readonly IWhatsAppProvider _whatsAppProvider;
 
-    public CompaniesController(ICompanyRepository companyRepository, IUsageCountersRepository usageRepository)
+    public CompaniesController(
+        ICompanyRepository companyRepository, 
+        IUsageCountersRepository usageRepository,
+        IWhatsAppProvider whatsAppProvider)
     {
         _companyRepository = companyRepository;
         _usageRepository = usageRepository;
+        _whatsAppProvider = whatsAppProvider;
     }
 
     private string GetCompanyId()
@@ -177,4 +182,37 @@ public class CompaniesController : ControllerBase
         await _companyRepository.UpdateAsync(company);
         return Ok(company.WhatsAppSettings);
     }
+
+    [HttpGet("whatsapp-qr")]
+    public async Task<ActionResult> GetWhatsAppQr()
+    {
+        var qrBase64 = await _whatsAppProvider.GetQrCodeAsync(GetCompanyId());
+        if (string.IsNullOrEmpty(qrBase64))
+        {
+            return BadRequest(new { message = "Could not generate QR. Verify WhatsApp Engine is running." });
+        }
+        return Ok(new { qrCode = qrBase64 });
+    }
+
+    [HttpPost("whatsapp-check")]
+    public async Task<ActionResult> CheckWhatsAppStatus()
+    {
+        var companyId = GetCompanyId();
+        var isConnected = await _whatsAppProvider.IsConnectedAsync(companyId);
+        
+        var company = await _companyRepository.GetByIdAsync(companyId);
+        if (company != null && company.WhatsAppSettings != null)
+        {
+            if (company.WhatsAppSettings.IsActive != isConnected)
+            {
+                company.WhatsAppSettings.IsActive = isConnected;
+                await _companyRepository.UpdateAsync(company);
+            }
+        }
+        
+        return Ok(new { isActive = isConnected });
+    }
 }
+
+
+

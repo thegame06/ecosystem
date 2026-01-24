@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using SaaS.Application.DTOs.WhatsApp;
 using SaaS.Application.Interfaces;
+using SaaS.Domain.Documents;
 using SaaS.Domain.Enums;
 
 namespace SaaS.Api.Controllers;
@@ -142,4 +144,104 @@ public class WhatsAppWebhooksController : ControllerBase
             return Ok(); // Always return 200 to Meta to avoid infinite retries
         }
     }
+
+    /// <summary>
+    /// POST /api/webhooks/whatsapp/byon/{companyId}
+    /// Recibe mensajes de WhatsApp (BYON / Unofficial)
+    /// </summary>
+    [HttpPost("byon/{companyId}")]
+    public async Task<IActionResult> ReceiveMessageByon(string companyId, [FromBody] JsonElement payload)
+    {
+        _logger.LogInformation("[Webhook BYON] Message received for company {CompanyId}", companyId);
+
+        try
+        {
+            // Note: Different BYON providers have different structures. 
+            // This is a generic implementation that expects basic fields or needs mapping.
+            // For now, let's assume a simple structure: { "from": "...", "text": "..." }
+            
+            string from = "";
+            string text = "";
+            string eventType = payload.TryGetProperty("event", out var e) ? e.GetString() ?? "" : "";
+
+            if (eventType == "connection.update")
+            {
+                if (payload.TryGetProperty("data", out var dataProp) && dataProp.TryGetProperty("state", out var stateProp))
+                {
+                    var state = stateProp.GetString();
+                    _logger.LogInformation("[Webhook BYON] Connection update for {CompanyId}: {State}", companyId, state);
+
+                    if (state == "open")
+                    {
+                        var company = await _companyRepository.GetByIdAsync(companyId);
+                        if (company != null)
+                        {
+                            if (company.WhatsAppSettings == null) 
+                                company.WhatsAppSettings = new WhatsAppSettings();
+                            
+                            company.WhatsAppSettings.IsActive = true;
+                            company.WhatsAppSettings.ProviderType = WhatsAppProviderType.Unofficial;
+                            
+                            // Track that we are connected
+                            await _companyRepository.UpdateAsync(company);
+                            _logger.LogInformation("[Webhook BYON] ✅ Company {CompanyId} marked as ACTIVE/CONNECTED", companyId);
+                        }
+                    }
+                    else if (state == "close" || state == "connecting")
+                    {
+                         // Optionally mark as inactive, but we might want to wait for "close" specifically
+                         var company = await _companyRepository.GetByIdAsync(companyId);
+                         if (company != null && company.WhatsAppSettings != null && company.WhatsAppSettings.IsActive)
+                         {
+                             company.WhatsAppSettings.IsActive = false;
+                             await _companyRepository.UpdateAsync(company);
+                             _logger.LogInformation("[Webhook BYON] ⚠️ Company {CompanyId} marked as INACTIVE (disconnected)", companyId);
+                         }
+                    }
+                }
+            }
+            else if (eventType == "messages.upsert")
+            {
+                if (payload.TryGetProperty("data", out var dataProp))
+                {
+                    // Get sender JID
+                    if (dataProp.TryGetProperty("key", out var keyProp) && keyProp.TryGetProperty("remoteJid", out var jidProp))
+                    {
+                        var fullJid = jidProp.GetString() ?? "";
+                        from = fullJid.Split('@')[0]; // Clean "@s.whatsapp.net"
+                    }
+
+                    // Get message body
+                    if (dataProp.TryGetProperty("message", out var msgProp))
+                    {
+                        if (msgProp.TryGetProperty("conversation", out var convProp))
+                        {
+                            text = convProp.GetString() ?? "";
+                        }
+                        else if (msgProp.TryGetProperty("extendedTextMessage", out var extProp) && extProp.TryGetProperty("text", out var tProp))
+                        {
+                            text = tProp.GetString() ?? "";
+                        }
+                    }
+                }
+            }
+
+
+            if (!string.IsNullOrEmpty(from) && !string.IsNullOrEmpty(text))
+            {
+                // Ensure we handle international format correctly
+                await _conversationService.HandleIncomingMessageAsync(companyId, from, text);
+                _logger.LogInformation("[Webhook BYON] ✅ Message processed: {From}: {Text}", from, text);
+            }
+
+            return Ok();
+
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Webhook BYON] ❌ Error processing message for company {CompanyId}", companyId);
+            return Ok();
+        }
+    }
 }
+

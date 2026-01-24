@@ -99,8 +99,10 @@ builder.Services.AddScoped<IPlanService, PlanService>();
 // PDF Generator
 builder.Services.AddSingleton<SaaS.Application.Interfaces.IPdfGenerator, SaaS.Infrastructure.Pdf.QuestPdfGenerator>();
 
-builder.Services.AddHttpClient<IWhatsAppProvider, WhatsAppProvider>();
-// builder.Services.AddScoped<IWhatsAppProvider, WhatsAppProviderMock>();
+// WhatsApp Providers
+builder.Services.AddHttpClient<WhatsAppCloudApiProvider>();
+builder.Services.AddScoped<WhatsAppByonProvider>();
+builder.Services.AddScoped<IWhatsAppProvider, WhatsAppProviderDispatcher>();
 
 // Configurar autenticación JWT
 builder.Services.AddAuthentication(options =>

@@ -1,5 +1,5 @@
 import api from './api';
-import { PlanType } from '../types/enums';
+import { PlanType, WhatsAppProviderType } from '../types/enums';
 
 export interface UsageCounters {
     messagesUsed: number;
@@ -9,12 +9,14 @@ export interface UsageCounters {
 }
 
 export interface WhatsAppSettings {
+    providerType?: WhatsAppProviderType;
     phoneNumberId?: string;
     accessToken?: string;
     verifyToken?: string;
     businessAccountId?: string;
     isActive?: boolean;
 }
+
 
 export interface CompanyInfo {
     id: string;
@@ -37,4 +39,8 @@ export const companyService = {
     getWhatsAppSettings: () => api.get<WhatsAppSettings>('/companies/whatsapp-settings'),
     createWhatsAppSettings: (data: WhatsAppSettings) => api.post<WhatsAppSettings>('/companies/whatsapp-settings', data),
     updateWhatsAppSettings: (data: WhatsAppSettings) => api.put<WhatsAppSettings>('/companies/whatsapp-settings', data),
+    getWhatsAppQr: () => api.get<{ qrCode: string }>('/companies/whatsapp-qr'),
+    checkWhatsAppStatus: () => api.post<{ isActive: boolean }>('/companies/whatsapp-check'),
 };
+
+

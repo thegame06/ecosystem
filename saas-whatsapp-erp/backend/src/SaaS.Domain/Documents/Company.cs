@@ -49,6 +49,9 @@ public class Company
 
 public class WhatsAppSettings
 {
+    [BsonElement("providerType")]
+    public WhatsAppProviderType ProviderType { get; set; } = WhatsAppProviderType.Official;
+
     [BsonElement("phoneNumberId")]
     public string PhoneNumberId { get; set; } = string.Empty;
 

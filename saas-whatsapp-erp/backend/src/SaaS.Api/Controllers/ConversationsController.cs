@@ -77,4 +77,14 @@ public class ConversationsController : ControllerBase
         if (customer == null) return NotFound();
         return Ok(customer);
     }
+
+    [HttpPost("{id}/messages")]
+    [LimitConsumption("messages")]
+    public async Task<IActionResult> SendMessage(string id, [FromBody] SendMessageRequest request)
+    {
+        var result = await _conversationService.SendMessageAsync(id, request.Message, GetCompanyId());
+        if (!result) return BadRequest(new { message = "Failed to send message or limit reached" });
+        return Ok(new { success = true });
+    }
 }
+

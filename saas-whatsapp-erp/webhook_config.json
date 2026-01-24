@@ -1,0 +1,10 @@
+{
+    "enabled": true,
+    "url": "https://local-annonaiflow-api.annonai.com/api/webhooks/whatsapp/byon/697134569c4511661eb53f86",
+    "webhookByEvents": false,
+    "events": [
+        "MESSAGES_UPSERT",
+        "CONNECTION_UPDATE",
+        "SEND_MESSAGE"
+    ]
+}

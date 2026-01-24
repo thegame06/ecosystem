@@ -12,15 +12,18 @@ public class ConversationService : IConversationService
 {
     private readonly IConversationRepository _conversationRepository;
     private readonly ICustomerRepository _customerRepository;
+    private readonly IWhatsAppProvider _whatsAppProvider;
     private readonly IPlanService _planService;
 
     public ConversationService(
         IConversationRepository conversationRepository,
         ICustomerRepository customerRepository,
+        IWhatsAppProvider whatsAppProvider,
         IPlanService planService)
     {
         _conversationRepository = conversationRepository;
         _customerRepository = customerRepository;
+        _whatsAppProvider = whatsAppProvider;
         _planService = planService;
     }
 
@@ -198,6 +201,7 @@ public class ConversationService : IConversationService
             await _customerRepository.CreateAsync(customer);
         }
 
+
         // 2. Cargar o crear conversación
         var conversation = await _conversationRepository.GetByCustomerIdAsync(companyId, customer.Id);
         if (conversation == null)
@@ -226,6 +230,37 @@ public class ConversationService : IConversationService
             conversation.LastActivityAt = DateTime.UtcNow;
             await _conversationRepository.UpdateAsync(conversation);
         }
+    }
+
+    public async Task<bool> SendMessageAsync(string conversationId, string message, string companyId)
+    {
+        var conversation = await _conversationRepository.GetByIdAsync(conversationId);
+        if (conversation == null || conversation.CompanyId != companyId)
+            return false;
+
+        var customer = await _customerRepository.GetByIdAsync(conversation.CustomerId);
+        if (customer == null) return false;
+
+        // 1. Validar límites de mensajes
+        var canSend = await _planService.CanConsumeAsync(companyId, "messages");
+        if (!canSend) return false;
+
+        // 2. Enviar via Provider
+        var success = await _whatsAppProvider.SendTextMessageAsync(companyId, customer.Phone, message);
+
+        if (success)
+        {
+            // 3. Actualizar conversación
+            conversation.LastMessage = message;
+            conversation.UpdatedAt = DateTime.UtcNow;
+            conversation.LastActivityAt = DateTime.UtcNow;
+            await _conversationRepository.UpdateAsync(conversation);
+
+            // 4. Track consumption
+            await _planService.TrackConsumptionAsync(companyId, "messages");
+        }
+
+        return success;
     }
 
     private ConversationResponse MapToResponse(Conversation conversation)

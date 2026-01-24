@@ -38,6 +38,12 @@ export enum DiscountType {
     Percentage = 2
 }
 
+export enum WhatsAppProviderType {
+    Official = 0,
+    Unofficial = 1
+}
+
+
 // Translation labels
 export const COMMERCIAL_STATE_LABELS: Record<CommercialState, string> = {
     [CommercialState.LEAD]: 'Nuevo Lead',
