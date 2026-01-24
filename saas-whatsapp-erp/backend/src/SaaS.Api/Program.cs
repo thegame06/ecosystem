@@ -139,6 +139,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Background Services
+builder.Services.AddHostedService<SaaS.Infrastructure.Services.WhatsAppHealthCheckService>();
+
 // builder.Services.AddControllers(); // Removed duplicate
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

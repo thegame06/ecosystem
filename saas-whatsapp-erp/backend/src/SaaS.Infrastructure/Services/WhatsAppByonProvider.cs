@@ -213,10 +213,14 @@ public class WhatsAppByonProvider : IWhatsAppProvider
     }
 
 
-    private async Task SetWebhookAsync(string instanceName)
+    public async Task SetWebhookAsync(string instanceName)
     {
         var webhookUrl = _configuration["EvolutionAPI:WebhookBaseUrl"];
-        if (string.IsNullOrEmpty(webhookUrl)) return;
+        if (string.IsNullOrEmpty(webhookUrl)) 
+        {
+            _logger.LogWarning("EvolutionAPI:WebhookBaseUrl is not configured. Skipping webhook setup.");
+            return;
+        }
 
         // Clean trailing slash
         webhookUrl = webhookUrl.TrimEnd('/');
