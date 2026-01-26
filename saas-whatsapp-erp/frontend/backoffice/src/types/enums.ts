@@ -3,7 +3,8 @@ export enum CommercialState {
     LEAD = 1,
     SALE_CREATED = 2,
     INVOICED = 3,
-    PAID = 4
+    PAID = 4,
+    CLOSED = 5
 }
 
 export enum ProductType {
@@ -43,20 +44,29 @@ export enum WhatsAppProviderType {
     Unofficial = 1
 }
 
+export enum MessageStatus {
+    SENT = 1,
+    DELIVERED = 2,
+    READ = 3,
+    FAILED = 4
+}
+
 
 // Translation labels
 export const COMMERCIAL_STATE_LABELS: Record<CommercialState, string> = {
     [CommercialState.LEAD]: 'Nuevo Lead',
     [CommercialState.SALE_CREATED]: 'Venta Creada',
     [CommercialState.INVOICED]: 'Facturado',
-    [CommercialState.PAID]: 'Pagado'
+    [CommercialState.PAID]: 'Pagado',
+    [CommercialState.CLOSED]: 'Cerrado'
 };
 
 export const COMMERCIAL_STATE_COLORS: Record<CommercialState, string> = {
     [CommercialState.LEAD]: 'bg-blue-100 text-blue-700 border-blue-200',
     [CommercialState.SALE_CREATED]: 'bg-amber-100 text-amber-700 border-amber-200',
     [CommercialState.INVOICED]: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    [CommercialState.PAID]: 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    [CommercialState.PAID]: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    [CommercialState.CLOSED]: 'bg-red-100 text-red-700 border-red-200'
 };
 
 export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {

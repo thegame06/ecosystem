@@ -72,6 +72,7 @@ public class ConversationMessageService : IConversationMessageService
             MediaMimeType = request.MediaMimeType,
             Caption = request.Caption,
             MessageTimestamp = request.Timestamp ?? DateTime.UtcNow,
+            Status = request.Status ?? Domain.Enums.MessageStatus.SENT,
             CreatedAt = DateTime.UtcNow
         };
     }

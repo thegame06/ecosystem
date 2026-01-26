@@ -23,5 +23,7 @@ public enum CommercialState
     /// <summary>
     /// Factura pagada
     /// </summary>
-    PAID = 4
+    PAID = 4,
+
+    CLOSED = 5
 }

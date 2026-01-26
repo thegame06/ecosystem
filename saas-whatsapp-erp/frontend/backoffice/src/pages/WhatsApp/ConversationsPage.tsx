@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, ShoppingCart, FileText, Send, User, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
+import { MessageCircle, ShoppingCart, FileText, Send, User, ChevronRight, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { conversationService } from '../../services/conversationService';
 import { saleService } from '../../services/saleService';
 import { Conversation } from '../../types/conversation';
-import { CommercialState } from '../../types/enums';
+import { CommercialState, MessageStatus } from '../../types/enums';
 import { Customer } from '../../types/customer';
 import POSModal from '../../components/WhatsApp/POSModal';
 import InvoiceModal from '../../components/WhatsApp/InvoiceModal';
@@ -22,6 +22,8 @@ const ConversationsPage: React.FC = () => {
     const [activeSaleId, setActiveSaleId] = useState<string | null>(null);
     const [messageInput, setMessageInput] = useState('');
     const [isSendingMessage, setIsSendingMessage] = useState(false);
+    const [isClosingConversation, setIsClosingConversation] = useState(false);
+    const [filter, setFilter] = useState<'active' | 'closed'>('active');
 
     useEffect(() => {
         fetchConversations();
@@ -112,6 +114,24 @@ const ConversationsPage: React.FC = () => {
         }
     };
 
+    const handleCloseConversation = async () => {
+        if (!selectedId || isClosingConversation) return;
+
+        if (!window.confirm('¿Está seguro de cerrar esta conversación?')) return;
+
+        setIsClosingConversation(true);
+        try {
+            await conversationService.close(selectedId);
+            setSelectedId(null);
+            fetchConversations();
+        } catch (err) {
+            console.error('Error closing conversation', err);
+            alert('Error al cerrar la conversación.');
+        } finally {
+            setIsClosingConversation(false);
+        }
+    };
+
     const selectedConversation = conversations.find(c => c.id === selectedId);
 
     const getStateBadge = (state: CommercialState) => {
@@ -124,9 +144,16 @@ const ConversationsPage: React.FC = () => {
                 return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 uppercase tracking-tighter">Facturado</span>;
             case CommercialState.PAID:
                 return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 uppercase tracking-tighter">Pagado</span>;
+            case CommercialState.CLOSED:
+                return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-tighter">Cerrado</span>;
             default: return null;
         }
     };
+
+    const filteredConversations = conversations.filter(c => {
+        if (filter === 'active') return c.lastState !== CommercialState.CLOSED;
+        return c.lastState === CommercialState.CLOSED;
+    });
 
     if (isLoading) return (
         <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] animate-pulse">
@@ -150,13 +177,29 @@ const ConversationsPage: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto bg-white/50 space-y-1 p-2">
-                    {conversations.length === 0 ? (
-                        <div className="p-10 text-center text-slate-400">
-                            <p className="text-sm">No hay conversaciones activas</p>
+                {/* Status Filter */}
+                <div className="flex p-2 bg-slate-50 gap-1 border-b border-slate-100">
+                    <button
+                        onClick={() => setFilter('active')}
+                        className={`flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${filter === 'active' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Abiertos
+                    </button>
+                    <button
+                        onClick={() => setFilter('closed')}
+                        className={`flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${filter === 'closed' ? 'bg-white text-slate-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Cerrados
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                    {filteredConversations.length === 0 ? (
+                        <div className="p-10 text-center text-slate-400 italic text-sm">
+                            No hay chats {filter === 'active' ? 'activos' : 'cerrados'}.
                         </div>
                     ) : (
-                        conversations.map(conv => (
+                        filteredConversations.map((conv) => (
                             <div
                                 key={conv.id}
                                 onClick={() => setSelectedId(conv.id)}
@@ -225,6 +268,17 @@ const ConversationsPage: React.FC = () => {
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado Comercial</span>
                                     {getStateBadge(selectedConversation.lastState)}
                                 </div>
+
+                                {selectedConversation.lastState !== CommercialState.CLOSED && (
+                                    <button
+                                        onClick={handleCloseConversation}
+                                        disabled={isClosingConversation}
+                                        className="h-10 px-4 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center gap-2"
+                                    >
+                                        <CheckCircle2 size={16} />
+                                        {isClosingConversation ? 'Cerrando...' : 'Cerrar Chat'}
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -245,14 +299,20 @@ const ConversationsPage: React.FC = () => {
                                         <div className={`group space-y-1 max-w-[80%]`}>
                                             <div className={`p-4 rounded-2xl shadow-sm border text-sm leading-relaxed
                                                 ${msg.fromMe
-                                                    ? 'bg-primary-600 text-white rounded-tr-none border-primary-500'
+                                                    ? msg.status === MessageStatus.FAILED
+                                                        ? 'bg-red-50 text-red-900 border-red-200 rounded-tr-none'
+                                                        : 'bg-primary-600 text-white rounded-tr-none border-primary-500'
                                                     : 'bg-white text-slate-800 rounded-tl-none border-slate-100 group-hover:shadow-md'
                                                 }`}>
                                                 <p>{msg.content}</p>
                                             </div>
                                             <span className={`text-[10px] font-bold text-slate-400 flex items-center gap-1.5 ${msg.fromMe ? 'justify-end' : 'justify-start'}`}>
                                                 {new Date(msg.messageTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                {msg.fromMe && <CheckCircle2 size={12} className="text-primary-500" />}
+                                                {msg.fromMe && (
+                                                    msg.status === MessageStatus.FAILED
+                                                        ? <AlertCircle size={12} className="text-red-500" />
+                                                        : <CheckCircle2 size={12} className="text-primary-500" />
+                                                )}
                                             </span>
                                         </div>
                                     </div>

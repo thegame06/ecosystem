@@ -15,5 +15,7 @@ public interface IConversationService
     Task<CustomerResponse?> GetCustomerAsync(string conversationId, string companyId);
     Task HandleIncomingMessageAsync(string companyId, string customerPhone, string message, string? pushName = null, string? remoteJid = null, string? externalId = null, DateTime? timestamp = null);
     Task<bool> SendMessageAsync(string conversationId, string message, string companyId);
+    Task<bool> CloseAsync(string conversationId, string companyId);
+    Task<bool> ReOpenAsync(string conversationId, string companyId);
 }
 

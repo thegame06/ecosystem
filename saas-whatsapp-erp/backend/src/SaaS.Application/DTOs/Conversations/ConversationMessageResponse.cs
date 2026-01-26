@@ -31,4 +31,6 @@ public class CreateMessageRequest
     public string? MediaMimeType { get; set; }
     public string? Caption { get; set; }
     public DateTime? Timestamp { get; set; }
+    public MessageStatus? Status { get; set; }
 }
+

@@ -101,5 +101,14 @@ public class ConversationsController : ControllerBase
         var messages = await _messageService.GetMessagesByConversationAsync(companyId, id);
         return Ok(messages);
     }
+    [HttpPost("{id}/close")]
+    public async Task<IActionResult> CloseConversation(string id)
+    {
+        var companyId = GetCompanyId();
+        var result = await _conversationService.CloseAsync(id, companyId);
+        if (!result) return NotFound();
+        return Ok(new { success = true });
+    }
 }
+
 

@@ -284,26 +284,64 @@ public class ConversationService : IConversationService
         var customer = await _customerRepository.GetByIdAsync(conversation.CustomerId);
         if (customer == null) return false;
 
-        // 1. Validar límites de mensajes
+        // 1. Validar límites de mensajes (Hard Limit)
         var canSend = await _planService.CanConsumeAsync(companyId, "messages");
         if (!canSend) return false;
 
         // 2. Enviar via Provider
         var success = await _whatsAppProvider.SendTextMessageAsync(companyId, customer.Phone, message);
+        
+        // 3. Guardar Mensaje Saliente (Tracking)
+        await _conversationMessageService.CreateMessageAsync(companyId, new CreateMessageRequest
+        {
+            ConversationId = conversation.Id,
+            CustomerId = customer.Id,
+            FromMe = true, // Es saliente
+            SenderName = "System",
+            Content = message,
+            Type = MessageType.TEXT,
+            Timestamp = DateTime.UtcNow,
+            Status = success ? MessageStatus.SENT : MessageStatus.FAILED
+        });
 
         if (success)
         {
-            // 3. Actualizar conversación
+            // 4. Actualizar conversación
             conversation.LastMessage = message;
             conversation.UpdatedAt = DateTime.UtcNow;
             conversation.LastActivityAt = DateTime.UtcNow;
             await _conversationRepository.UpdateAsync(conversation);
 
-            // 4. Track consumption
+            // 5. Track consumption
             await _planService.TrackConsumptionAsync(companyId, "messages");
+        }
+        else
+        {
+            Console.WriteLine($"[ERROR] Failed to send message to {customer.Phone}");
         }
 
         return success;
+    }
+
+    public async Task<bool> CloseAsync(string conversationId, string companyId)
+    {
+        var conversation = await _conversationRepository.GetByIdAsync(conversationId);
+        if (conversation == null || conversation.CompanyId != companyId)
+            return false;
+
+        conversation.LastState = CommercialState.CLOSED;
+        conversation.UpdatedAt = DateTime.UtcNow;
+        // conversation.IsActive = false; // Optional logic: "Archive" it
+        
+        await _conversationRepository.UpdateAsync(conversation);
+        return true;
+    }
+
+    public async Task<bool> ReOpenAsync(string conversationId, string companyId)
+    {
+        // Reopen implementation can be added later if needed.
+        // For MVP, inbound messages re-open/update threads naturally.
+        return await Task.FromResult(false); 
     }
 
     private ConversationResponse MapToResponse(Conversation conversation)
