@@ -70,6 +70,14 @@ export const saleService = {
         const response = await api.get(`/sales/${id}/invoice`);
         return response.data;
     },
+
+    /**
+     * Simular cálculo de venta (Centralizado en Backend)
+     */
+    calculate: async (data: any): Promise<any> => {
+        const response = await api.post('/sales/calculate', data);
+        return response.data;
+    },
 };
 
 /**

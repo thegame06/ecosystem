@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Product } from '../types/product';
 import { Customer } from '../types/customer';
 import { CartItem, CreateSaleRequest, SaleError } from '../types/sale';
@@ -21,37 +21,6 @@ export const usePOS = ({ initialCustomerId, onSuccess, companyInfo }: UsePOSOpti
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<SaleError | null>(null);
 
-    const calculateItemTotals = useCallback((item: CartItem): CartItem => {
-        let subtotal = 0;
-        let taxAmount = 0;
-        let total = 0;
-
-        // Note: isTaxable here refers to if the PRODUCT is taxable. 
-        // Company-level tax enabling is handled in the final totals calculation.
-        if (item.isTaxable) {
-            if (item.priceIncludesTax) {
-                total = item.quantity * item.unitPrice;
-                subtotal = total / (1 + item.taxRate);
-                taxAmount = total - subtotal;
-            } else {
-                subtotal = item.quantity * item.unitPrice;
-                taxAmount = subtotal * item.taxRate;
-                total = subtotal + taxAmount;
-            }
-        } else {
-            subtotal = item.quantity * item.unitPrice;
-            taxAmount = 0;
-            total = subtotal;
-        }
-
-        return {
-            ...item,
-            subtotal: Math.round(subtotal * 100) / 100,
-            taxAmount: Math.round(taxAmount * 100) / 100,
-            total: Math.round(total * 100) / 100,
-        };
-    }, []);
-
     const addToCart = useCallback((product: Product) => {
         const effectiveTaxRate = product.taxRate !== undefined && product.taxRate !== null
             ? product.taxRate
@@ -64,7 +33,7 @@ export const usePOS = ({ initialCustomerId, onSuccess, companyInfo }: UsePOSOpti
             if (existing) {
                 return prev.map(item =>
                     item.productId === product.id
-                        ? calculateItemTotals({ ...item, quantity: item.quantity + 1 })
+                        ? { ...item, quantity: item.quantity + 1 }
                         : item
                 );
             }
@@ -77,23 +46,25 @@ export const usePOS = ({ initialCustomerId, onSuccess, companyInfo }: UsePOSOpti
                 isTaxable: isTaxable,
                 taxRate: effectiveTaxRate,
                 priceIncludesTax: product.priceIncludesTax || false,
+                discountType: product.discount ? DiscountType.Percentage : DiscountType.None,
+                discountValue: product.discount || 0,
                 subtotal: 0,
                 taxAmount: 0,
                 total: 0,
             };
-            return [...prev, calculateItemTotals(newItem)];
+            return [...prev, newItem];
         });
-    }, [companyInfo, calculateItemTotals]);
+    }, [companyInfo]);
 
     const updateQuantity = useCallback((productId: string, delta: number) => {
         setCart(prev => prev.map(item => {
             if (item.productId === productId) {
                 const newQty = Math.max(0.01, item.quantity + delta);
-                return calculateItemTotals({ ...item, quantity: newQty });
+                return { ...item, quantity: newQty };
             }
             return item;
         }));
-    }, [calculateItemTotals]);
+    }, []);
 
     const removeFromCart = useCallback((productId: string) => {
         setCart(prev => prev.filter(item => item.productId !== productId));
@@ -105,56 +76,68 @@ export const usePOS = ({ initialCustomerId, onSuccess, companyInfo }: UsePOSOpti
         setPaymentMethod(PaymentMethod.Cash);
     }, []);
 
-    const totals = useMemo(() => {
-        const rawSubtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
+    const [calculationResult, setCalculationResult] = useState<any>(null);
 
-        let discountAmount = 0;
-        if (globalDiscount) {
-            if (globalDiscount.type === DiscountType.Percentage) {
-                discountAmount = rawSubtotal * (globalDiscount.value / 100);
-            } else {
-                discountAmount = globalDiscount.value;
-            }
+    useEffect(() => {
+        if (cart.length === 0) {
+            setCalculationResult(null);
+            return;
         }
 
-        discountAmount = Math.min(discountAmount, rawSubtotal);
+        const fetchTotals = async () => {
+            const request = {
+                items: cart.map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    discountType: item.discountType || DiscountType.None,
+                    discountValue: item.discountValue || 0,
+                })),
+                applyTax,
+                globalDiscount: globalDiscount || undefined
+            };
 
-        let finalSubtotal = 0;
-        let finalTaxTotal = 0;
-
-        cart.forEach(item => {
-            const lineDiscountShare = rawSubtotal > 0
-                ? (item.subtotal / rawSubtotal) * discountAmount
-                : 0;
-
-            const subtotalAfterDiscount = item.subtotal - lineDiscountShare;
-            const taxRate = item.taxRate || companyInfo?.taxRate || 0.15;
-
-            let lineSubtotal: number;
-            let lineTaxAmount: number;
-
-            if (item.priceIncludesTax) {
-                const lineTotal = subtotalAfterDiscount;
-                lineSubtotal = lineTotal / (1 + taxRate);
-                lineTaxAmount = lineTotal - lineSubtotal;
-            } else {
-                lineSubtotal = subtotalAfterDiscount;
-                lineTaxAmount = 0;
-                if (applyTax && item.isTaxable) {
-                    lineTaxAmount = lineSubtotal * taxRate;
-                }
+            try {
+                const result = await saleService.calculate(request);
+                setCalculationResult(result);
+            } catch (err) {
+                console.error('Error calculating totals from backend:', err);
             }
+        };
 
-            finalSubtotal += lineSubtotal;
-            finalTaxTotal += lineTaxAmount;
+        const timer = setTimeout(fetchTotals, 300);
+        return () => clearTimeout(timer);
+    }, [cart, applyTax, globalDiscount]);
+
+    const totals = useMemo(() => {
+        if (!calculationResult) {
+            return { subtotal: 0, taxTotal: 0, total: 0, discountAmount: 0, rawSubtotal: 0 };
+        }
+        return {
+            subtotal: calculationResult.subtotal,
+            taxTotal: calculationResult.taxTotal,
+            total: calculationResult.total,
+            discountAmount: calculationResult.discountTotal,
+            rawSubtotal: calculationResult.items.reduce((acc: number, i: any) => acc + (i.quantity * i.unitPrice), 0)
+        };
+    }, [calculationResult]);
+
+    // Homologar los items del carrito con los calculados por el backend para la UI
+    const displayCart = useMemo(() => {
+        if (!calculationResult) return cart;
+        return cart.map(item => {
+            const calculated = calculationResult.items.find((i: any) => i.productId === item.productId);
+            if (calculated) {
+                return {
+                    ...item,
+                    subtotal: calculated.subtotal,
+                    taxAmount: calculated.taxAmount,
+                    total: calculated.total
+                };
+            }
+            return item;
         });
-
-        const subtotal = Math.round(finalSubtotal * 100) / 100;
-        const taxTotal = Math.round(finalTaxTotal * 100) / 100;
-        const total = Math.round((subtotal + taxTotal) * 100) / 100;
-
-        return { subtotal, taxTotal, total, discountAmount, rawSubtotal };
-    }, [cart, globalDiscount, applyTax, companyInfo]);
+    }, [cart, calculationResult]);
 
     const submitSale = async (channel: string, editSaleId?: string | null) => {
         const customerId = selectedCustomer?.id || initialCustomerId;
@@ -172,6 +155,8 @@ export const usePOS = ({ initialCustomerId, onSuccess, companyInfo }: UsePOSOpti
                     productId: item.productId,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
+                    discountType: item.discountType || DiscountType.None,
+                    discountValue: item.discountValue || 0,
                 })),
                 channel
             };
@@ -209,6 +194,8 @@ export const usePOS = ({ initialCustomerId, onSuccess, companyInfo }: UsePOSOpti
                     isTaxable: item.taxAmount > 0,
                     taxRate: taxRate,
                     priceIncludesTax: false,
+                    discountType: item.discountType || DiscountType.None,
+                    discountValue: item.discountValue || 0,
                     subtotal: subtotal,
                     taxAmount: item.taxAmount,
                     total: item.total
@@ -229,7 +216,7 @@ export const usePOS = ({ initialCustomerId, onSuccess, companyInfo }: UsePOSOpti
     }, [companyInfo]);
 
     return {
-        cart,
+        cart: displayCart,
         setCart,
         selectedCustomer,
         setSelectedCustomer,
@@ -248,7 +235,6 @@ export const usePOS = ({ initialCustomerId, onSuccess, companyInfo }: UsePOSOpti
         clearCart,
         totals,
         submitSale,
-        calculateItemTotals,
         rehydrate
     };
 };

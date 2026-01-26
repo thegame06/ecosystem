@@ -11,7 +11,9 @@ import { CommercialState, PaymentMethod, DiscountType } from './enums';
 export interface CreateSaleItemRequest {
     productId: string;
     quantity: number;
-    unitPrice?: number; // Opcional: si no se envía, backend usa precio del producto
+    unitPrice?: number;
+    discountType?: DiscountType;
+    discountValue?: number;
 }
 
 /**
@@ -91,6 +93,8 @@ export interface CartItem {
     isTaxable: boolean;
     taxRate: number; // e.g. 0.15
     priceIncludesTax: boolean;
+    discountType?: DiscountType;
+    discountValue?: number;
     // Calculados
     subtotal: number;
     taxAmount: number;

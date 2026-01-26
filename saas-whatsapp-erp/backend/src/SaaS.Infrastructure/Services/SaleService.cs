@@ -25,7 +25,7 @@ public class SaleService : ISaleService
     public SaleService(
         ISaleRepository saleRepository,
         IProductRepository productRepository,
-        ICustomerRepository customerRepository, 
+        ICustomerRepository customerRepository,
         IInvoiceRepository invoiceRepository,
         ICompanyRepository companyRepository)
     {
@@ -37,12 +37,12 @@ public class SaleService : ISaleService
     }
 
     public async Task<ResponsePagination<SaleResponse>> SearchAsync(
-        ODataQueryOptions<SaleResponse> queryOptions, 
+        ODataQueryOptions<SaleResponse> queryOptions,
         string companyId)
     {
         // 1. Obtener IQueryable filtrado por companyId (NO carga datos en memoria)
         var salesQuery = _saleRepository.GetQueryable(companyId);
-        
+
         // 2. Mapear a DTOs (aún en IQueryable, no ejecutado)
         var saleResponses = salesQuery.Select(sale => new SaleResponse
         {
@@ -72,7 +72,7 @@ public class SaleService : ISaleService
 
         // 3. Aplicar OData (filtros, orden) - TODAVÍA en MongoDB
         var filteredQuery = queryOptions.ApplyTo(saleResponses) as IQueryable<SaleResponse>;
-        
+
         // 4. Contar total (ejecuta query COUNT en MongoDB)
         var totalCount = filteredQuery?.LongCount() ?? 0;
 
@@ -168,9 +168,11 @@ public class SaleService : ISaleService
                 Unit = product.Unit ?? "Unidad",
                 Quantity = itemReq.Quantity,
                 UnitPrice = unitPrice,
+                DiscountType = itemReq.DiscountType,
+                DiscountValue = itemReq.DiscountValue,
                 TaxRate = product.TaxRate,
                 IsTaxable = product.IsTaxable,
-                PriceIncludesTax = product.PriceIncludesTax  // CORREGIDO: Ahora se usa
+                PriceIncludesTax = product.PriceIncludesTax
             });
         }
 
@@ -276,9 +278,11 @@ public class SaleService : ISaleService
                     Unit = product.Unit ?? "Unidad",
                     Quantity = itemReq.Quantity,
                     UnitPrice = unitPrice,
+                    DiscountType = itemReq.DiscountType,
+                    DiscountValue = itemReq.DiscountValue,
                     TaxRate = product.TaxRate,
                     IsTaxable = product.IsTaxable,
-                    PriceIncludesTax = product.PriceIncludesTax  // CORREGIDO: Ahora se usa
+                    PriceIncludesTax = product.PriceIncludesTax
                 });
             }
 
@@ -324,13 +328,13 @@ public class SaleService : ISaleService
     public async Task<InvoiceResponse?> GetInvoiceAsync(string saleId, string companyId)
     {
         var sale = await _saleRepository.GetByIdAsync(saleId);
-        if (sale == null || sale.CompanyId != companyId) 
+        if (sale == null || sale.CompanyId != companyId)
             return null;
 
         var invoice = await _invoiceRepository.GetBySaleIdAsync(saleId);
-        if (invoice == null) 
+        if (invoice == null)
             return null;
-        
+
         return new InvoiceResponse
         {
             Id = invoice.Id,
@@ -344,13 +348,69 @@ public class SaleService : ISaleService
             Total = invoice.Total,
             Items = invoice.Items.Select(i => new SaleItemResponse
             {
-               ProductId = i.ProductId,
-               ProductName = i.ProductName,
-               Quantity = i.Quantity,
-               UnitPrice = i.UnitPrice,
-               TaxRate = i.TaxRate,
-               Subtotal = i.Subtotal,
-               Total = i.Total
+                ProductId = i.ProductId,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice,
+                TaxRate = i.TaxRate,
+                Subtotal = i.Subtotal,
+                Total = i.Total
+            }).ToList()
+        };
+    }
+
+    public async Task<SaleCalculationResponse> CalculateAsync(CalculateSaleRequest request, string companyId)
+    {
+        var company = await _companyRepository.GetByIdAsync(companyId);
+        var companyTaxRate = company?.TaxRate ?? 0.15m;
+
+        var saleItemInputs = new List<SaleItemInput>();
+        foreach (var itemReq in request.Items)
+        {
+            var product = await _productRepository.GetByIdAsync(itemReq.ProductId);
+            if (product == null || product.CompanyId != companyId)
+                throw new ArgumentException($"Invalid product {itemReq.ProductId}");
+
+            var unitPrice = itemReq.UnitPrice ?? product.Price;
+
+            saleItemInputs.Add(new SaleItemInput
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                Unit = product.Unit ?? "Unidad",
+                Quantity = itemReq.Quantity,
+                UnitPrice = unitPrice,
+                DiscountType = itemReq.DiscountType,
+                DiscountValue = itemReq.DiscountValue,
+                TaxRate = product.TaxRate,
+                IsTaxable = product.IsTaxable,
+                PriceIncludesTax = product.PriceIncludesTax
+            });
+        }
+
+        var calculation = SalePricingCalculator.Calculate(
+            saleItemInputs,
+            companyTaxRate,
+            request.ApplyTax,
+            request.GlobalDiscount?.Type ?? DiscountType.None,
+            request.GlobalDiscount?.Value ?? 0
+        );
+
+        return new SaleCalculationResponse
+        {
+            Subtotal = calculation.Subtotal,
+            TaxTotal = calculation.TaxTotal,
+            Total = calculation.Total,
+            DiscountTotal = calculation.Items.Sum(i => i.DiscountValue),
+            Items = calculation.Items.Select(i => new SaleItemCalculationResponse
+            {
+                ProductId = i.ProductId,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice,
+                Subtotal = i.DiscountedSubtotal,
+                TaxAmount = i.TaxAmount,
+                Total = i.Total
             }).ToList()
         };
     }

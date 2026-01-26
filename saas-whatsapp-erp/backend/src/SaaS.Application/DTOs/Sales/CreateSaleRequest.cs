@@ -7,11 +7,14 @@ public class CreateSaleItemRequest
 {
     [Required]
     public string ProductId { get; set; } = string.Empty;
-    
+
     [Range(0.01, double.MaxValue)]
     public decimal Quantity { get; set; }
-    
+
     public decimal? UnitPrice { get; set; }
+
+    public DiscountType DiscountType { get; set; } = DiscountType.None;
+    public decimal DiscountValue { get; set; }
 }
 
 public class CreateSaleRequest

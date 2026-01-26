@@ -13,4 +13,5 @@ public interface ISaleService
     Task<SaleResponse> CreateAsync(CreateSaleRequest request, string companyId, string userId);
     Task<SaleResponse?> UpdateAsync(string id, UpdateSaleRequest request, string companyId, string userId);
     Task<InvoiceResponse?> GetInvoiceAsync(string saleId, string companyId);
+    Task<SaleCalculationResponse> CalculateAsync(CalculateSaleRequest request, string companyId);
 }

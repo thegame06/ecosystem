@@ -27,8 +27,8 @@ public class SalesController : ControllerBase
 
     private string GetUserId()
     {
-        return User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
-            ?? User.FindFirst("sub")?.Value 
+        return User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value
             ?? throw new UnauthorizedAccessException("User ID not found in token");
     }
 
@@ -72,7 +72,7 @@ public class SalesController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-         catch (InvalidOperationException ex)
+        catch (InvalidOperationException ex)
         {
             // Stock insuficiente
             return Conflict(new { message = ex.Message });
@@ -90,7 +90,7 @@ public class SalesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-             return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message });
         }
     }
 
@@ -107,5 +107,19 @@ public class SalesController : ControllerBase
             Success = true,
             Message = invoice == null ? "No invoice generated yet for this sale" : null
         });
+    }
+
+    [HttpPost("calculate")]
+    public async Task<ActionResult<SaleCalculationResponse>> Calculate([FromBody] CalculateSaleRequest request)
+    {
+        try
+        {
+            var result = await _saleService.CalculateAsync(request, GetCompanyId());
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }
