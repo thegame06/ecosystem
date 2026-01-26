@@ -19,7 +19,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
 
     public WhatsAppByonProvider(
         HttpClient httpClient,
-        ICompanyRepository companyRepository, 
+        ICompanyRepository companyRepository,
         IConfiguration configuration,
         ILogger<WhatsAppByonProvider> logger)
     {
@@ -36,7 +36,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         try
         {
             var instanceName = $"comp_{companyId}";
-            
+
             // 1. Check if instance exists, if not create
             await CreateInstanceIfNotExists(instanceName);
 
@@ -51,12 +51,12 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             if (response.IsSuccessStatusCode)
             {
                 using var doc = JsonDocument.Parse(content);
-                
+
                 if (doc.RootElement.TryGetProperty("base64", out var base64Prop))
                 {
                     return base64Prop.GetString() ?? string.Empty;
                 }
-                
+
                 if (doc.RootElement.TryGetProperty("code", out var codeProp))
                 {
                     return codeProp.GetString() ?? string.Empty;
@@ -68,8 +68,8 @@ public class WhatsAppByonProvider : IWhatsAppProvider
                     if (qrObj.TryGetProperty("base64", out var b64)) return b64.GetString() ?? string.Empty;
                 }
             }
-            
-            _logger.LogWarning("Failed to extract QR code for {CompanyId}. Status: {Code}, Body: {Body}", 
+
+            _logger.LogWarning("Failed to extract QR code for {CompanyId}. Status: {Code}, Body: {Body}",
                 companyId, response.StatusCode, content);
             return string.Empty;
         }
@@ -87,7 +87,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         {
             var instanceName = $"comp_{companyId}";
             var url = $"{_baseUrl}/instance/connectionState/{instanceName}";
-            
+
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("apikey", _apiKey);
 
@@ -96,7 +96,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             {
                 var content = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(content);
-                if (doc.RootElement.TryGetProperty("instance", out var instProp) && 
+                if (doc.RootElement.TryGetProperty("instance", out var instProp) &&
                     instProp.TryGetProperty("state", out var stateProp))
                 {
                     var state = stateProp.GetString();
@@ -117,7 +117,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         {
             var instanceName = $"comp_{companyId}";
             var url = $"{_baseUrl}/message/sendText/{instanceName}";
-            
+
             var payload = new
             {
                 number = toNumber,
@@ -140,14 +140,14 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         {
             var instanceName = $"comp_{companyId}";
             var url = $"{_baseUrl}/message/sendMedia/{instanceName}";
-            
+
             var base64File = Convert.ToBase64String(pdfBytes);
-            
+
             var payload = new
             {
                 number = toNumber,
-                mediaMessage = new 
-                { 
+                mediaMessage = new
+                {
                     mediatype = "document",
                     media = base64File,
                     caption = fileName,
@@ -185,7 +185,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             else if (doc.RootElement.ValueKind == JsonValueKind.Object)
             {
                 // In v1 it returns {"instance": {...}}
-                exists = doc.RootElement.TryGetProperty("instance", out _) || 
+                exists = doc.RootElement.TryGetProperty("instance", out _) ||
                          doc.RootElement.TryGetProperty("instanceName", out _);
             }
         }
@@ -194,16 +194,16 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         {
             _logger.LogInformation("Instance {InstanceName} not found. Creating it...", instanceName);
             // Create instance
-            var payload = new 
-            { 
+            var payload = new
+            {
                 instanceName = instanceName,
-                token = instanceName, 
+                token = instanceName,
                 qrcode = true,
                 integration = "WHATSAPP-BAILEYS"
             };
-            
+
             await SendPostRequestAsync($"{_baseUrl}/instance/create", payload);
-            
+
             // Wait for it to be ready
             await Task.Delay(1000);
         }
@@ -216,7 +216,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
     public async Task SetWebhookAsync(string instanceName)
     {
         var webhookUrl = _configuration["EvolutionAPI:WebhookBaseUrl"];
-        if (string.IsNullOrEmpty(webhookUrl)) 
+        if (string.IsNullOrEmpty(webhookUrl))
         {
             _logger.LogWarning("EvolutionAPI:WebhookBaseUrl is not configured. Skipping webhook setup.");
             return;
@@ -233,25 +233,30 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             value = fullWebhookUrl,
             enabled = true,
             webhook_by_events = false,
-            events = new[] 
-            { 
-                "MESSAGES_UPSERT", 
-                "MESSAGES_UPDATE", 
-                "MESSAGES_DELETE", 
-                "SEND_MESSAGE", 
-                "CONNECTION_UPDATE", 
-                "CONTACTS_UPDATE" 
+            events = new[]
+            {
+                "MESSAGES_UPSERT",
+                "MESSAGES_UPDATE",
+                "MESSAGES_DELETE",
+                "SEND_MESSAGE",
+                "CONNECTION_UPDATE",
+                "CONTACTS_UPDATE"
             }
         };
 
         // Note: Evolution API v1.x uses /webhook/instance/set/{instanceName}
         // v2.x use /webhook/set/{instanceName}
         // Let's try to be compatible.
-        await SendPostRequestAsync($"{_baseUrl}/webhook/instance/set/{instanceName}", payload);
+        var success = await SendPostRequestAsync($"{_baseUrl}/webhook/instance/set/{instanceName}", payload, suppressErrorLog: true);
+        if (!success)
+        {
+            _logger.LogInformation("V1 Webhook endpoint failed or not found, trying V2 endpoint...");
+            await SendPostRequestAsync($"{_baseUrl}/webhook/set/{instanceName}", payload);
+        }
     }
 
 
-    private async Task<bool> SendPostRequestAsync(string url, object payload)
+    private async Task<bool> SendPostRequestAsync(string url, object payload, bool suppressErrorLog = false)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Headers.Add("apikey", _apiKey);
@@ -260,8 +265,11 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         var response = await _httpClient.SendAsync(request);
         if (!response.IsSuccessStatusCode)
         {
-            var errorBody = await response.Content.ReadAsStringAsync();
-            _logger.LogError("Evolution API POST error: {Code}, {Body}", response.StatusCode, errorBody);
+            if (!suppressErrorLog)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Evolution API POST error: {Code}, {Body}", response.StatusCode, errorBody);
+            }
             return false;
         }
 
@@ -274,7 +282,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         {
             var instanceName = $"comp_{companyId}";
             var url = $"{_baseUrl}/instance/logout/{instanceName}";
-            
+
             var request = new HttpRequestMessage(HttpMethod.Delete, url);
             request.Headers.Add("apikey", _apiKey);
 
@@ -285,7 +293,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
                 _logger.LogError("Error logging out instance {Instance}: {Body}", instanceName, errorBody);
                 return false;
             }
-            
+
             return true;
         }
         catch (Exception ex)

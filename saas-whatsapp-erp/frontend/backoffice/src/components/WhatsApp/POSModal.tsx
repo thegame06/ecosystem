@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Search, Plus, CheckCircle, Package, ChevronRight, ArrowLeft, Wrench, Truck, ArrowRightLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, CheckCircle, ArrowRightLeft } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { Product } from '../../types/product';
 import { productService } from '../../services/productService';
 import { saleService } from '../../services/saleService';
 import { companyService, CompanyInfo } from '../../services/companyService';
-import { ProductType, PRODUCT_TYPE_LABELS } from '../../types/enums';
 import { usePOS } from '../../hooks/usePOS';
 
 // Shared components
 import POSCartItem from '../POS/POSCartItem';
 import POSPricingSummary from '../POS/POSPricingSummary';
 import POSControls from '../POS/POSControls';
+import POSCatalog from '../POS/POSCatalog';
 
 interface POSModalProps {
     isOpen: boolean;
@@ -25,13 +25,8 @@ interface POSModalProps {
 
 const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, customerName, editSaleId, channel, onSuccess }) => {
     const [products, setProducts] = useState<Product[]>([]);
-    const [search, setSearch] = useState('');
     const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-
-    // UI Local State
-    const [selectedCategory, setSelectedCategory] = useState<ProductType | null>(null);
-    const [filterType, setFilterType] = useState<ProductType | 'all'>('all');
 
     // THE CORE POS HOOK
     const {
@@ -72,11 +67,6 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                 } else {
                     clearCart();
                 }
-
-                // Reset UI filters
-                setSelectedCategory(null);
-                setFilterType('all');
-                setSearch('');
             };
             loadData();
         }
@@ -114,44 +104,6 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
             setIsLoading(false);
         }
     };
-
-    // UI Helpers
-    const getTypeIcon = (type: ProductType) => {
-        switch (type) {
-            case ProductType.Tangible: return <Package size={24} className="text-primary-600" />;
-            case ProductType.Service: return <Wrench size={24} className="text-blue-600" />;
-            case ProductType.Rentable: return <Truck size={24} className="text-amber-600" />;
-            default: return <Package size={24} className="text-slate-600" />;
-        }
-    };
-
-    const getStockIndicator = (product: Product) => {
-        if (!product.trackInventory) return <span className="text-[10px] font-bold text-slate-400">♾️ Ilimitado</span>;
-        const stock = product.stock || 0;
-        if (stock === 0) return <span className="text-[10px] font-bold text-red-500">❌ Sin stock</span>;
-        if (stock <= 3) return <span className="text-[10px] font-bold text-amber-500">⚠️ Solo {stock}</span>;
-        return <span className="text-[10px] font-bold text-green-600">✅ {stock} disp.</span>;
-    };
-
-    const groupedProducts = useMemo(() => {
-        const groups: Record<ProductType, Product[]> = {
-            [ProductType.Tangible]: [],
-            [ProductType.Service]: [],
-            [ProductType.Rentable]: []
-        };
-        products.forEach(p => {
-            if (p.type !== undefined && groups[p.type]) groups[p.type].push(p);
-        });
-        return groups;
-    }, [products]);
-
-    const displayProducts = useMemo(() => {
-        let filtered = products;
-        if (selectedCategory !== null) filtered = filtered.filter(p => p.type === selectedCategory);
-        if (selectedCategory === null && filterType !== 'all') filtered = filtered.filter(p => p.type === filterType);
-        if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
-        return filtered;
-    }, [products, search, filterType, selectedCategory]);
 
     const handleFinalSubmit = async () => {
         try {
@@ -204,98 +156,39 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
             }
         >
             {editSaleId && (
-                <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-100 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
+                <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-100 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in text-left">
                     <div className="flex items-center gap-4">
                         <ArrowRightLeft size={20} className="text-amber-500 animate-pulse" />
                         <div>
-                            <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Modo Edición</div>
+                            <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1 underline decoration-2 underline-offset-4">Modo Edición</div>
                             <div className="text-sm font-black text-amber-900">Orden #{editSaleId.slice(-6).toUpperCase()} ({channel})</div>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className="flex gap-8 h-[60vh]">
-                <div className="flex-1 flex flex-col min-w-0">
-                    <div className="relative mb-6">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                        <input
-                            type="text"
-                            placeholder={selectedCategory ? `Buscar en ${PRODUCT_TYPE_LABELS[selectedCategory]}s...` : "Buscar productos..."}
-                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-medium outline-none focus:ring-4 focus:ring-primary-500/10 transition-all shadow-inner"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
+            <div className="flex gap-8 h-[65vh]">
+                {/* HOMOLOGATED CATALOG COMPONENT */}
+                <POSCatalog
+                    products={products}
+                    isLoading={isLoading}
+                    onAddToCart={addToCart}
+                    currencySymbol={companyInfo?.currencySymbol || '$'}
+                />
 
-                    {!selectedCategory && (
-                        <div className="flex gap-2 mb-4">
-                            <button onClick={() => setFilterType('all')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${filterType === 'all' ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todos ({products.length})</button>
-                            <button onClick={() => setFilterType(ProductType.Tangible)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${filterType === ProductType.Tangible ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600'}`}>Productos</button>
-                            <button onClick={() => setFilterType(ProductType.Service)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${filterType === ProductType.Service ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600'}`}>Servicios</button>
-                        </div>
-                    )}
-
-                    {selectedCategory && (
-                        <button onClick={() => setSelectedCategory(null)} className="mb-4 flex items-center gap-2 text-sm font-bold text-primary-600 hover:text-primary-700">
-                            <ArrowLeft size={16} /> Volver a categorías
-                        </button>
-                    )}
-
-                    <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 gap-4 h-fit">
-                        {isLoading ? (
-                            <div className="col-span-2 text-center py-10 text-slate-400 animate-pulse font-bold">Cargando...</div>
-                        ) : selectedCategory === null && filterType === 'all' && !search ? (
-                            Object.entries(groupedProducts).map(([type, items]) => {
-                                const productType = Number(type) as ProductType;
-                                if (items.length === 0) return null;
-                                return (
-                                    <div key={type} onClick={() => setSelectedCategory(productType)} className="p-6 bg-white border-2 border-slate-100 rounded-2xl hover:border-primary-500 hover:shadow-xl transition-all cursor-pointer group col-span-2 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-primary-50 transition-colors">{getTypeIcon(productType)}</div>
-                                            <div>
-                                                <h4 className="font-black text-slate-800 text-lg uppercase tracking-tight">{PRODUCT_TYPE_LABELS[productType]}s</h4>
-                                                <p className="text-sm text-slate-500 font-medium">{items.length} ítems</p>
-                                            </div>
-                                        </div>
-                                        <ChevronRight size={24} className="text-slate-400 group-hover:text-primary-600 transition-colors" />
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            displayProducts.map(product => {
-                                const canAdd = !product.trackInventory || (product.stock && product.stock > 0);
-                                return (
-                                    <div key={product.id} onClick={() => canAdd && addToCart(product)} className={`p-4 bg-white border border-slate-100 rounded-2xl transition-all flex gap-4 items-center ${canAdd ? 'hover:border-primary-500 hover:shadow-xl cursor-pointer group' : 'opacity-50 cursor-not-allowed'}`}>
-                                        <div className={`w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center transition-colors ${canAdd ? 'text-slate-400 group-hover:text-primary-500' : 'text-slate-300'}`}><Package size={24} /></div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-slate-800 truncate text-sm leading-tight">{product.name}</h4>
-                                            <div className="flex items-center justify-between mt-1">
-                                                <span className="text-lg font-black text-slate-900">{companyInfo?.currencySymbol || '$'}{product.price.toFixed(2)}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{product.unit || 'pza'}</span>
-                                            </div>
-                                            {getStockIndicator(product)}
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
-
-                <div className="w-96 flex flex-col bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden">
-                    <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white">
+                <div className="w-96 flex flex-col bg-slate-50/50 rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-inner">
+                    <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white/80 backdrop-blur-md">
                         <h3 className="font-black text-slate-800 flex items-center gap-2 italic uppercase tracking-tighter">
                             <ShoppingCart className="text-primary-600" size={20} /> Carrito ({cart.length})
                         </h3>
-                        <button onClick={() => clearCart()} className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:underline">Vaciar</button>
+                        <button onClick={() => clearCart()} className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:underline decoration-2 underline-offset-4">Vaciar</button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-3">
                         {cart.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center px-6">
-                                <ShoppingCart size={48} className="mb-4 opacity-10" />
-                                <p className="text-xs font-bold opacity-50 uppercase tracking-widest">Carrito vacío</p>
+                                <ShoppingCart size={48} className="mb-4 opacity-5 transition-all group-hover:scale-110" />
+                                <p className="text-xs font-bold opacity-30 uppercase tracking-widest italic">El carrito está esperando...</p>
                             </div>
                         ) : (
                             cart.map(item => (
@@ -310,7 +203,7 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                         )}
                     </div>
 
-                    <div className="p-4 bg-white border-t border-slate-100 space-y-6">
+                    <div className="p-6 bg-white border-t border-slate-100 space-y-6 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
                         <POSControls
                             paymentMethod={paymentMethod}
                             setPaymentMethod={setPaymentMethod}
@@ -332,7 +225,7 @@ const POSModal: React.FC<POSModalProps> = ({ isOpen, onClose, customerId, custom
                         />
 
                         {error && (
-                            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-[10px] font-bold text-red-600 uppercase tracking-widest leading-relaxed">
+                            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-[10px] font-bold text-red-600 uppercase tracking-widest leading-relaxed animate-bounce-short text-left">
                                 {error.message}
                             </div>
                         )}
