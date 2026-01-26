@@ -9,6 +9,7 @@ export interface Product {
     price: number;
     costPrice?: number;
     taxRate?: number;
+    isTaxable: boolean;
     priceIncludesTax: boolean;
     imageUrl?: string;
     unit?: string;
