@@ -30,7 +30,7 @@ public class WhatsAppCloudApiProvider : IWhatsAppProvider
             if (settings == null) return false;
 
             var url = $"https://graph.facebook.com/{GraphApiVersion}/{settings.PhoneNumberId}/messages";
-            
+
             var payload = new
             {
                 messaging_product = "whatsapp",
@@ -68,8 +68,8 @@ public class WhatsAppCloudApiProvider : IWhatsAppProvider
                 recipient_type = "individual",
                 to = toNumber,
                 type = "document",
-                document = new 
-                { 
+                document = new
+                {
                     id = mediaId,
                     filename = fileName
                 }
@@ -97,20 +97,20 @@ public class WhatsAppCloudApiProvider : IWhatsAppProvider
 
     private async Task<string?> UploadMediaAsync(WhatsAppSettings settings, byte[] fileBytes, string fileName, string mimeType)
     {
-        try 
+        try
         {
             var url = $"https://graph.facebook.com/{GraphApiVersion}/{settings.PhoneNumberId}/media";
-            
+
             using var request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.AccessToken);
 
             using var content = new MultipartFormDataContent();
             using var fileContent = new ByteArrayContent(fileBytes);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
-            
+
             content.Add(new StringContent("whatsapp"), "messaging_product");
             content.Add(fileContent, "file", fileName);
-            
+
             request.Content = content;
 
             var response = await _httpClient.SendAsync(request);
@@ -131,8 +131,8 @@ public class WhatsAppCloudApiProvider : IWhatsAppProvider
         }
         catch (Exception ex)
         {
-             _logger.LogError(ex, "Exception uploading WhatsApp media");
-             return null;
+            _logger.LogError(ex, "Exception uploading WhatsApp media");
+            return null;
         }
     }
 
@@ -163,6 +163,8 @@ public class WhatsAppCloudApiProvider : IWhatsAppProvider
     }
 
     public Task<bool> LogoutAsync(string companyId) => Task.FromResult(true);
+
+    public Task<bool> SyncWebhookAsync(string companyId) => Task.FromResult(true);
 }
 
 

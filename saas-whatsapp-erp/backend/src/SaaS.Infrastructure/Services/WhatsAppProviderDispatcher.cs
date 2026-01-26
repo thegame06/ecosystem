@@ -13,8 +13,8 @@ public class WhatsAppProviderDispatcher : IWhatsAppProvider
     private readonly ILogger<WhatsAppProviderDispatcher> _logger;
 
     public WhatsAppProviderDispatcher(
-        IServiceProvider serviceProvider, 
-        ICompanyRepository companyRepository, 
+        IServiceProvider serviceProvider,
+        ICompanyRepository companyRepository,
         ILogger<WhatsAppProviderDispatcher> logger)
     {
         _serviceProvider = serviceProvider;
@@ -50,6 +50,12 @@ public class WhatsAppProviderDispatcher : IWhatsAppProvider
     {
         var provider = await GetProviderAsync(companyId);
         return await provider.LogoutAsync(companyId);
+    }
+
+    public async Task<bool> SyncWebhookAsync(string companyId)
+    {
+        var provider = await GetProviderAsync(companyId);
+        return await provider.SyncWebhookAsync(companyId);
     }
 
 

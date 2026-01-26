@@ -7,6 +7,7 @@ public interface IWhatsAppProvider
     Task<string> GetQrCodeAsync(string companyId);
     Task<bool> IsConnectedAsync(string companyId);
     Task<bool> LogoutAsync(string companyId);
+    Task<bool> SyncWebhookAsync(string companyId);
 }
 
 

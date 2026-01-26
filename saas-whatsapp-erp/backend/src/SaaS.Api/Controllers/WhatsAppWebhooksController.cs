@@ -17,8 +17,8 @@ public class WhatsAppWebhooksController : ControllerBase
     private readonly ILogger<WhatsAppWebhooksController> _logger;
 
     public WhatsAppWebhooksController(
-        IConversationService conversationService, 
-        IPlanService planService, 
+        IConversationService conversationService,
+        IPlanService planService,
         ICompanyRepository companyRepository,
         ILogger<WhatsAppWebhooksController> logger)
     {
@@ -123,7 +123,7 @@ public class WhatsAppWebhooksController : ControllerBase
                 // Validate phone number ID matches
                 if (!string.IsNullOrEmpty(phoneNumberId) && phoneNumberId != company.WhatsAppSettings.PhoneNumberId)
                 {
-                    _logger.LogWarning("[Webhook] Phone number ID mismatch. Expected: {Expected}, Received: {Received}", 
+                    _logger.LogWarning("[Webhook] Phone number ID mismatch. Expected: {Expected}, Received: {Received}",
                         company.WhatsAppSettings.PhoneNumberId, phoneNumberId);
                     return Ok();
                 }
@@ -160,12 +160,13 @@ public class WhatsAppWebhooksController : ControllerBase
             // Note: Different BYON providers have different structures. 
             // This is a generic implementation that expects basic fields or needs mapping.
             // For now, let's assume a simple structure: { "from": "...", "text": "..." }
-            
+
             string from = "";
             string text = "";
             string eventType = payload.TryGetProperty("event", out var e) ? e.GetString() ?? "" : "";
 
-            if (eventType == "connection.update")
+            if (eventType.Equals("connection.update", StringComparison.OrdinalIgnoreCase) ||
+                eventType.Equals("CONNECTION_UPDATE", StringComparison.OrdinalIgnoreCase))
             {
                 if (payload.TryGetProperty("data", out var dataProp) && dataProp.TryGetProperty("state", out var stateProp))
                 {
@@ -177,12 +178,12 @@ public class WhatsAppWebhooksController : ControllerBase
                         var company = await _companyRepository.GetByIdAsync(companyId);
                         if (company != null)
                         {
-                            if (company.WhatsAppSettings == null) 
+                            if (company.WhatsAppSettings == null)
                                 company.WhatsAppSettings = new WhatsAppSettings();
-                            
+
                             company.WhatsAppSettings.IsActive = true;
                             company.WhatsAppSettings.ProviderType = WhatsAppProviderType.Unofficial;
-                            
+
                             // Track that we are connected
                             await _companyRepository.UpdateAsync(company);
                             _logger.LogInformation("[Webhook BYON] ✅ Company {CompanyId} marked as ACTIVE/CONNECTED", companyId);
@@ -190,37 +191,45 @@ public class WhatsAppWebhooksController : ControllerBase
                     }
                     else if (state == "close" || state == "connecting")
                     {
-                         // Optionally mark as inactive, but we might want to wait for "close" specifically
-                         var company = await _companyRepository.GetByIdAsync(companyId);
-                         if (company != null && company.WhatsAppSettings != null && company.WhatsAppSettings.IsActive)
-                         {
-                             company.WhatsAppSettings.IsActive = false;
-                             await _companyRepository.UpdateAsync(company);
-                             _logger.LogInformation("[Webhook BYON] ⚠️ Company {CompanyId} marked as INACTIVE (disconnected)", companyId);
-                         }
+                        // Optionally mark as inactive, but we might want to wait for "close" specifically
+                        var company = await _companyRepository.GetByIdAsync(companyId);
+                        if (company != null && company.WhatsAppSettings != null && company.WhatsAppSettings.IsActive)
+                        {
+                            company.WhatsAppSettings.IsActive = false;
+                            await _companyRepository.UpdateAsync(company);
+                            _logger.LogInformation("[Webhook BYON] ⚠️ Company {CompanyId} marked as INACTIVE (disconnected)", companyId);
+                        }
                     }
                 }
             }
-            else if (eventType == "messages.upsert")
+            else if (eventType.Equals("messages.upsert", StringComparison.OrdinalIgnoreCase) ||
+                     eventType.Equals("MESSAGES_UPSERT", StringComparison.OrdinalIgnoreCase))
             {
                 if (payload.TryGetProperty("data", out var dataProp))
                 {
+                    // For MESSAGES_UPSERT, data is often an array in some versions or a single object in others
+                    JsonElement messageData = dataProp;
+                    if (dataProp.ValueKind == JsonValueKind.Array && dataProp.GetArrayLength() > 0)
+                    {
+                        messageData = dataProp[0];
+                    }
+
                     // Get sender JID
-                    if (dataProp.TryGetProperty("key", out var keyProp) && keyProp.TryGetProperty("remoteJid", out var jidProp))
+                    if (messageData.TryGetProperty("key", out var keyProp) && keyProp.TryGetProperty("remoteJid", out var jidProp))
                     {
                         var fullJid = jidProp.GetString() ?? "";
                         from = fullJid.Split('@')[0]; // Clean "@s.whatsapp.net"
                     }
 
                     // Check if it's from me (avoid loops)
-                    if (dataProp.TryGetProperty("key", out var keyProp2) && keyProp2.TryGetProperty("fromMe", out var fromMeProp) && fromMeProp.GetBoolean())
+                    if (messageData.TryGetProperty("key", out var keyProp2) && keyProp2.TryGetProperty("fromMe", out var fromMeProp) && fromMeProp.GetBoolean())
                     {
                         _logger.LogInformation("[Webhook BYON] Ignoring message from ME");
                         return Ok();
                     }
 
                     // Get message body
-                    if (dataProp.TryGetProperty("message", out var msgProp))
+                    if (messageData.TryGetProperty("message", out var msgProp))
                     {
                         if (msgProp.TryGetProperty("conversation", out var convProp))
                         {
@@ -252,7 +261,7 @@ public class WhatsAppWebhooksController : ControllerBase
                     if (d.TryGetProperty("pushName", out var pn)) pushName = pn.GetString();
                     if (d.TryGetProperty("key", out var k) && k.TryGetProperty("id", out var id)) externalId = id.GetString();
                     if (d.TryGetProperty("key", out var z) && z.TryGetProperty("remoteJid", out var rJid)) remoteJid = rJid.GetString();
-                    if (d.TryGetProperty("messageTimestamp", out var ts) && ts.TryGetInt64(out var tsVal)) 
+                    if (d.TryGetProperty("messageTimestamp", out var ts) && ts.TryGetInt64(out var tsVal))
                     {
                         timestamp = DateTimeOffset.FromUnixTimeSeconds(tsVal).UtcDateTime;
                     }

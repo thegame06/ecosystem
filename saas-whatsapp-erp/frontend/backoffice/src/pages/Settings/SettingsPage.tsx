@@ -383,21 +383,38 @@ const SettingsPage: React.FC = () => {
                                     </div>
 
                                     {company.whatsAppSettings?.isActive && (
-                                        <button
-                                            type="button"
-                                            onClick={async () => {
-                                                try {
-                                                    await companyService.logoutWhatsApp();
-                                                    loadCompany(); // Reload state from server
-                                                    setMessage({ type: 'success', text: 'WhatsApp desvinculado correctamente' });
-                                                } catch (e) {
-                                                    setMessage({ type: 'error', text: 'Error al desvincular WhatsApp' });
-                                                }
-                                            }}
-                                            className="ml-4 px-3 py-1 bg-white border border-emerald-200 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-tighter hover:bg-emerald-100 transition-colors"
-                                        >
-                                            Desvincular
-                                        </button>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    try {
+                                                        await companyService.syncWhatsApp();
+                                                        setMessage({ type: 'success', text: 'Webhook de WhatsApp sincronizado correctamente' });
+                                                        setTimeout(() => setMessage(null), 3000);
+                                                    } catch (e) {
+                                                        setMessage({ type: 'error', text: 'Error al sincronizar el webhook' });
+                                                    }
+                                                }}
+                                                className="ml-4 px-3 py-1 bg-primary-600 text-white rounded-full text-[9px] font-black uppercase tracking-tighter hover:bg-primary-700 transition-colors"
+                                            >
+                                                Sincronizar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    try {
+                                                        await companyService.logoutWhatsApp();
+                                                        loadCompany(); // Reload state from server
+                                                        setMessage({ type: 'success', text: 'WhatsApp desvinculado correctamente' });
+                                                    } catch (e) {
+                                                        setMessage({ type: 'error', text: 'Error al desvincular WhatsApp' });
+                                                    }
+                                                }}
+                                                className="ml-4 px-3 py-1 bg-white border border-emerald-200 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-tighter hover:bg-emerald-100 transition-colors"
+                                            >
+                                                Desvincular
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 

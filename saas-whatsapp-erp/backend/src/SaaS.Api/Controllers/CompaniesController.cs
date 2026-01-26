@@ -16,7 +16,7 @@ public class CompaniesController : ControllerBase
     private readonly IWhatsAppProvider _whatsAppProvider;
 
     public CompaniesController(
-        ICompanyRepository companyRepository, 
+        ICompanyRepository companyRepository,
         IUsageCountersRepository usageRepository,
         IWhatsAppProvider whatsAppProvider)
     {
@@ -49,14 +49,15 @@ public class CompaniesController : ControllerBase
     {
         var period = DateTime.UtcNow.ToString("yyyy-MM");
         var usage = await _usageRepository.GetCurrentAsync(GetCompanyId(), period);
-        
+
         if (usage == null)
         {
-            return Ok(new { 
-                messagesUsed = 0, 
-                conversationsUsed = 0, 
-                invoicesUsed = 0, 
-                usersUsed = 0 
+            return Ok(new
+            {
+                messagesUsed = 0,
+                conversationsUsed = 0,
+                invoicesUsed = 0,
+                usersUsed = 0
             });
         }
 
@@ -199,7 +200,7 @@ public class CompaniesController : ControllerBase
     {
         var companyId = GetCompanyId();
         var isConnected = await _whatsAppProvider.IsConnectedAsync(companyId);
-        
+
         var company = await _companyRepository.GetByIdAsync(companyId);
         if (company != null && company.WhatsAppSettings != null)
         {
@@ -209,7 +210,7 @@ public class CompaniesController : ControllerBase
                 await _companyRepository.UpdateAsync(company);
             }
         }
-        
+
         return Ok(new { isActive = isConnected });
     }
 
@@ -218,19 +219,23 @@ public class CompaniesController : ControllerBase
     {
         var companyId = GetCompanyId();
         await _whatsAppProvider.LogoutAsync(companyId);
-        
+
         var company = await _companyRepository.GetByIdAsync(companyId);
         if (company != null && company.WhatsAppSettings != null)
         {
             company.WhatsAppSettings.IsActive = false;
             await _companyRepository.UpdateAsync(company);
         }
-        
+
         return Ok(new { message = "Logged out successfully" });
     }
+
+    [HttpPost("whatsapp-sync")]
+    public async Task<ActionResult> SyncWhatsApp()
+    {
+        var companyId = GetCompanyId();
+        await _whatsAppProvider.SyncWebhookAsync(companyId);
+        return Ok(new { message = "WhatsApp sync triggered." });
+    }
 }
-
-
-
-
 

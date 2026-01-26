@@ -232,7 +232,7 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         {
             value = fullWebhookUrl,
             enabled = true,
-            webhook_by_events = false,
+            webhook_by_events = true,
             events = new[]
             {
                 "MESSAGES_UPSERT",
@@ -299,6 +299,21 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception during logout for {CompanyId}", companyId);
+            return false;
+        }
+    }
+
+    public async Task<bool> SyncWebhookAsync(string companyId)
+    {
+        try
+        {
+            var instanceName = $"comp_{companyId}";
+            await SetWebhookAsync(instanceName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error syncing webhook for {CompanyId}", companyId);
             return false;
         }
     }

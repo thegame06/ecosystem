@@ -42,6 +42,7 @@ export const companyService = {
     getWhatsAppQr: () => api.get<{ qrCode: string }>('/companies/whatsapp-qr'),
     checkWhatsAppStatus: () => api.post<{ isActive: boolean }>('/companies/whatsapp-check'),
     logoutWhatsApp: () => api.delete('/companies/whatsapp-logout'),
+    syncWhatsApp: () => api.post('/companies/whatsapp-sync'),
 };
 
 
