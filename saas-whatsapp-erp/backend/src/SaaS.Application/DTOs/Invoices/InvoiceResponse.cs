@@ -15,6 +15,8 @@ public class InvoiceResponse
     public DateTime? SentAt { get; set; }
     public DateTime? PaidAt { get; set; }
     public DateTime? DueDate { get; set; }
+    public decimal Subtotal { get; set; }
+    public decimal TaxTotal { get; set; }
     public decimal Total { get; set; }
     public List<SaleItemResponse> Items { get; set; } = new();
 }

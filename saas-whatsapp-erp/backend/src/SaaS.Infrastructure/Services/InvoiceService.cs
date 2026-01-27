@@ -41,12 +41,12 @@ public class InvoiceService : IInvoiceService
     }
 
     public async Task<ResponsePagination<InvoiceResponse>> SearchAsync(
-        ODataQueryOptions<InvoiceResponse> queryOptions, 
+        ODataQueryOptions<InvoiceResponse> queryOptions,
         string companyId)
     {
         // 1. Obtener IQueryable filtrado por companyId (NO carga datos)
         var invoicesQuery = _invoiceRepository.GetQueryable(companyId);
-        
+
         // 2. Mapear a DTOs inline (aún NO ejecuta query)
         var invoiceResponses = invoicesQuery.Select(invoice => new InvoiceResponse
         {
@@ -60,22 +60,28 @@ public class InvoiceService : IInvoiceService
             SentAt = invoice.SentAt,
             PaidAt = invoice.PaidAt,
             DueDate = invoice.DueDate,
+            Subtotal = invoice.Subtotal,
+            TaxTotal = invoice.TaxAmount,
             Total = invoice.Total,
             Items = invoice.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,
-                ProductName = i.ProductName,
+                NameSnapshot = i.NameSnapshot,
+                Unit = i.Unit,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
+                DiscountType = i.DiscountType,
+                DiscountValue = i.DiscountValue,
+                DiscountedSubtotal = i.DiscountedSubtotal,
                 TaxRate = i.TaxRate,
-                Subtotal = i.Subtotal,
+                TaxAmount = i.TaxAmount,
                 Total = i.Total
             }).ToList()
         });
 
         // 3. Aplicar OData (TODAVÍA en MongoDB)
         var filteredQuery = queryOptions.ApplyTo(invoiceResponses) as IQueryable<InvoiceResponse>;
-        
+
         // 4. Contar total (ejecuta COUNT en MongoDB)
         var totalCount = filteredQuery?.LongCount() ?? 0;
 
@@ -117,12 +123,12 @@ public class InvoiceService : IInvoiceService
     {
         var sale = await _saleRepository.GetByIdAsync(request.SaleId);
         if (sale == null || sale.CompanyId != companyId)
-             throw new ArgumentException("Invalid sale");
+            throw new ArgumentException("Invalid sale");
 
         // Validar si ya existe factura
         var existing = await _invoiceRepository.GetBySaleIdAsync(sale.Id);
         if (existing != null)
-             throw new InvalidOperationException("Invoice already exists for this sale");
+            throw new InvalidOperationException("Invoice already exists for this sale");
 
         // Generar número (simple)
         var number = "INV-" + DateTime.UtcNow.Ticks.ToString().Substring(10);
@@ -175,22 +181,22 @@ public class InvoiceService : IInvoiceService
         var updated = await _invoiceRepository.UpdateAsync(invoice);
 
         // Si se paga, marcar venta como pagada
-        if(updated.Status == InvoiceStatus.Paid) 
+        if (updated.Status == InvoiceStatus.Paid)
         {
-             var sale = await _saleRepository.GetByIdAsync(updated.SaleId);
-             if (sale != null) 
-             {
-                 sale.State = CommercialState.PAID;
-                 await _saleRepository.UpdateAsync(sale);
-             }
-             
-             // Y el cliente tambien
-             var customer = await _customerRepository.GetByIdAsync(updated.CustomerId);
-             if (customer != null)
-             {
-                 customer.CurrentState = CommercialState.PAID;
-                 await _customerRepository.UpdateAsync(customer);
-             }
+            var sale = await _saleRepository.GetByIdAsync(updated.SaleId);
+            if (sale != null)
+            {
+                sale.State = CommercialState.PAID;
+                await _saleRepository.UpdateAsync(sale);
+            }
+
+            // Y el cliente tambien
+            var customer = await _customerRepository.GetByIdAsync(updated.CustomerId);
+            if (customer != null)
+            {
+                customer.CurrentState = CommercialState.PAID;
+                await _customerRepository.UpdateAsync(customer);
+            }
         }
 
         return MapToResponse(updated);
@@ -232,9 +238,9 @@ public class InvoiceService : IInvoiceService
         if (waNumber == null) return;
 
         var pdfBytes = await GeneratePdfAsync(id, companyId);
-        
+
         // 1. Enviar mensaje de texto inicial
-        await _whatsappProvider.SendTextMessageAsync(companyId, customer.Phone, 
+        await _whatsappProvider.SendTextMessageAsync(companyId, customer.Phone,
             $"Hola {customer.Name}, aquí tienes tu factura {invoice.Number} por un total de {invoice.Total:C}.");
 
         // 2. Enviar el PDF
@@ -262,15 +268,21 @@ public class InvoiceService : IInvoiceService
             SentAt = invoice.SentAt,
             PaidAt = invoice.PaidAt,
             DueDate = invoice.DueDate,
+            Subtotal = invoice.Subtotal,
+            TaxTotal = invoice.TaxAmount,
             Total = invoice.Total,
             Items = invoice.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,
-                ProductName = i.ProductName,
+                NameSnapshot = i.NameSnapshot,
+                Unit = i.Unit,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
+                DiscountType = i.DiscountType,
+                DiscountValue = i.DiscountValue,
+                DiscountedSubtotal = i.DiscountedSubtotal,
                 TaxRate = i.TaxRate,
-                Subtotal = i.Subtotal,
+                TaxAmount = i.TaxAmount,
                 Total = i.Total
             }).ToList()
         };

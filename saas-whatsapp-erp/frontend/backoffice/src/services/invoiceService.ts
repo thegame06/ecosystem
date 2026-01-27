@@ -16,12 +16,23 @@ export const invoiceService = {
     updateStatus: (id: string, status: InvoiceStatus | string) => api.put(`/invoices/${id}/status`, { status }),
 };
 
+export interface InvoiceItem {
+    productId: string;
+    nameSnapshot: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+}
+
 export interface Invoice {
     id: string;
     saleId: string;
     customerId: string;
     number: string;
+    subtotal: number;
+    taxTotal: number;
     total: number;
     status: InvoiceStatus;
     issuedAt: string;
+    items?: InvoiceItem[];
 }

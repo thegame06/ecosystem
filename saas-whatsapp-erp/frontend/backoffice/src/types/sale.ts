@@ -48,6 +48,7 @@ export interface SaleItemResponse {
     discountType: DiscountType;
     discountValue: number;
     discountedSubtotal: number;
+    taxRate: number;
     taxAmount: number;
     total: number;
 }

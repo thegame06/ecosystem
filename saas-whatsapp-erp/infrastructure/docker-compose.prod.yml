@@ -1,0 +1,53 @@
+services:
+  # 1. Reverse Proxy (Terminación SSL y Routing)
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # 2. WhatsApp Gateway (Core)
+  evolution_api:
+    image: atendai/evolution-api:v1.8.2
+    container_name: evolution_api
+    restart: always
+    environment:
+      - SERVER_URL=${EVOLUTION_PUBLIC_URL}
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - DATABASE_ENABLED=false
+    volumes:
+      - evolution_instances:/evolution/instances
+
+  # 3. Backend .NET
+  backend_api:
+    image: ${GHCR_IMAGE_BACKEND}:latest
+    container_name: backend_api
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - MongoDB__ConnectionString=${MONGO_CONNECTION_STRING}
+      - MongoDB__DatabaseName=${DB_NAME}
+      - EvolutionAPI__BaseUrl=http://evolution_api:8080
+      - EvolutionAPI__ApiKey=${EVOLUTION_API_KEY}
+      - JWT__Key=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+    depends_on:
+      - evolution_api
+
+  # 4. Frontend (Servido como estáticos)
+  frontend:
+    image: ${GHCR_IMAGE_FRONTEND}:latest
+    container_name: frontend_app
+    restart: always
+
+volumes:
+  evolution_instances:
+  caddy_data:
+  caddy_config:

@@ -27,12 +27,12 @@ public class CustomerService : ICustomerService
     }
 
     public async Task<ResponsePagination<CustomerResponse>> SearchAsync(
-        ODataQueryOptions<CustomerResponse> queryOptions, 
+        ODataQueryOptions<CustomerResponse> queryOptions,
         string companyId)
     {
         // 1. Obtener IQueryable filtrado por companyId (NO carga datos)
         var customersQuery = _customerRepository.GetQueryable(companyId);
-        
+
         // 2. Mapear a DTOs inline (aún NO ejecuta query)
         var customerResponses = customersQuery.Select(customer => new CustomerResponse
         {
@@ -48,7 +48,7 @@ public class CustomerService : ICustomerService
 
         // 3. Aplicar OData (TODAVÍA en MongoDB)
         var filteredQuery = queryOptions.ApplyTo(customerResponses) as IQueryable<CustomerResponse>;
-        
+
         // 4. Contar total (ejecuta COUNT en MongoDB)
         var totalCount = filteredQuery?.LongCount() ?? 0;
 
@@ -93,7 +93,7 @@ public class CustomerService : ICustomerService
         var existingCustomer = await _customerRepository.GetByPhoneAsync(companyId, request.Phone);
         if (existingCustomer != null && existingCustomer.IsActive)
         {
-             throw new InvalidOperationException($"A customer with phone {request.Phone} already exists.");
+            throw new InvalidOperationException($"A customer with phone {request.Phone} already exists.");
         }
 
         var customer = new Customer
@@ -124,9 +124,9 @@ public class CustomerService : ICustomerService
         if (customer.Phone != request.Phone)
         {
             var existing = await _customerRepository.GetByPhoneAsync(companyId, request.Phone);
-             if (existing != null && existing.Id != id && existing.IsActive)
+            if (existing != null && existing.Id != id && existing.IsActive)
             {
-                 throw new InvalidOperationException($"A customer with phone {request.Phone} already exists.");
+                throw new InvalidOperationException($"A customer with phone {request.Phone} already exists.");
             }
         }
 
@@ -135,7 +135,7 @@ public class CustomerService : ICustomerService
         customer.Email = request.Email;
         customer.TaxId = request.TaxId;
         customer.Address = request.Address;
-        if(request.CurrentState.HasValue)
+        if (request.CurrentState.HasValue)
         {
             customer.CurrentState = request.CurrentState.Value;
         }
@@ -155,7 +155,7 @@ public class CustomerService : ICustomerService
         customer.IsActive = false;
         customer.UpdatedAt = DateTime.UtcNow;
         await _customerRepository.UpdateAsync(customer);
-        
+
         return true;
     }
 
@@ -169,7 +169,7 @@ public class CustomerService : ICustomerService
 
         // TODO: Populate lists when repositories support GetByCustomerId
         // For now returning empty lists or need to add methods to repositories
-        
+
         // response.Sales = await _saleRepository.GetByCustomerIdAsync(id);
         // response.Invoices = ...
         // response.Conversations = ...
@@ -197,17 +197,27 @@ public class CustomerService : ICustomerService
             Number = sale.Number,
             Date = sale.Date,
             Subtotal = sale.Subtotal,
-            TaxAmount = sale.TaxAmount,
+            TaxTotal = sale.TaxAmount,
             Total = sale.Total,
             State = sale.State,
+            PaymentMethod = sale.PaymentMethod,
+            ApplyTax = sale.ApplyTax,
+            GlobalDiscountType = sale.GlobalDiscountType,
+            GlobalDiscountValue = sale.GlobalDiscountValue,
+            Channel = sale.Channel,
+            CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,
-                ProductName = i.ProductName,
+                NameSnapshot = i.NameSnapshot,
+                Unit = i.Unit,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
+                DiscountType = i.DiscountType,
+                DiscountValue = i.DiscountValue,
+                DiscountedSubtotal = i.DiscountedSubtotal,
                 TaxRate = i.TaxRate,
-                Subtotal = i.Subtotal,
+                TaxAmount = i.TaxAmount,
                 Total = i.Total
             }).ToList()
         };

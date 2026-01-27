@@ -163,6 +163,7 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({ saleId, isOpen
                                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Descripción</th>
                                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Cant.</th>
                                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">Unitario</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">IVA</th>
                                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">Total</th>
                                         </tr>
                                     </thead>
@@ -171,10 +172,21 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({ saleId, isOpen
                                             <tr key={idx}>
                                                 <td className="px-6 py-4">
                                                     <div className="font-bold text-slate-800 text-sm">{item.nameSnapshot}</div>
-                                                    <div className="text-[10px] text-slate-400 uppercase font-black">{item.unit}</div>
+                                                    <div className="text-[10px] text-slate-400 uppercase font-black">
+                                                        {item.unit}
+                                                        {item.discountValue > 0 && (
+                                                            <span className="ml-2 text-amber-600">
+                                                                (Desc. -${item.discountValue.toFixed(2)})
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center font-bold text-slate-600">{item.quantity}</td>
                                                 <td className="px-6 py-4 text-right font-bold text-slate-600">${(item.unitPrice ?? 0).toFixed(2)}</td>
+                                                <td className="px-6 py-4 text-right font-bold text-slate-400">
+                                                    <div className="text-slate-600">${(item.taxAmount ?? 0).toFixed(2)}</div>
+                                                    <div className="text-[9px]">{(item.taxRate * 100).toFixed(0)}%</div>
+                                                </td>
                                                 <td className="px-6 py-4 text-right font-black text-slate-900">${(item.total ?? 0).toFixed(2)}</td>
                                             </tr>
                                         ))}
@@ -185,19 +197,45 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({ saleId, isOpen
 
                         {/* Totals Summary */}
                         <div className="flex justify-end pt-4">
-                            <div className="w-64 space-y-3">
-                                <div className="flex justify-between items-center text-sm font-bold text-slate-500">
-                                    <span>Subtotal</span>
-                                    <span>${(sale.subtotal ?? 0).toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm font-bold text-slate-500">
-                                    <span>Impuestos (IVA)</span>
-                                    <span>${(sale.taxTotal ?? 0).toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between items-center pt-3 border-t border-slate-200 font-black text-xl text-slate-900">
-                                    <span>Total</span>
-                                    <span>${(sale.total ?? 0).toFixed(2)}</span>
-                                </div>
+                            <div className="w-64 space-y-2">
+                                {(() => {
+                                    const rawSubtotal = sale.items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+                                    const discountAmount = rawSubtotal - sale.subtotal;
+                                    const hasDiscount = discountAmount > 0.01;
+
+                                    return (
+                                        <>
+                                            <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+                                                <span>Subtotal</span>
+                                                <span>${rawSubtotal.toFixed(2)}</span>
+                                            </div>
+
+                                            {hasDiscount && (
+                                                <div className="flex justify-between items-center text-sm font-bold text-amber-600">
+                                                    <span>Descuento</span>
+                                                    <span>-${discountAmount.toFixed(2)}</span>
+                                                </div>
+                                            )}
+
+                                            {hasDiscount && (
+                                                <div className="flex justify-between items-center text-sm font-black text-slate-700 pt-1 mt-1 border-t border-slate-100">
+                                                    <span>Subtotal Neto</span>
+                                                    <span>${(sale.subtotal ?? 0).toFixed(2)}</span>
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+                                                <span>IVA {sale.applyTax ? '' : '(0%)'}</span>
+                                                <span>${(sale.taxTotal ?? 0).toFixed(2)}</span>
+                                            </div>
+
+                                            <div className="flex justify-between items-center pt-3 border-t border-slate-200 font-black text-2xl text-slate-900">
+                                                <span>Total</span>
+                                                <span className="text-primary-600">${(sale.total ?? 0).toFixed(2)}</span>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>

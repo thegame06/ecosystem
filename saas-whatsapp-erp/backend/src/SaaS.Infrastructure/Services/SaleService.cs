@@ -52,20 +52,27 @@ public class SaleService : ISaleService
             Number = sale.Number,
             Date = sale.Date,
             Subtotal = sale.Subtotal,
-            TaxAmount = sale.TaxAmount,
+            TaxTotal = sale.TaxAmount,
             Total = sale.Total,
             State = sale.State,
             PaymentMethod = sale.PaymentMethod,
+            ApplyTax = sale.ApplyTax,
+            GlobalDiscountType = sale.GlobalDiscountType,
+            GlobalDiscountValue = sale.GlobalDiscountValue,
             Channel = sale.Channel,
             CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,
-                ProductName = i.ProductName,
+                NameSnapshot = i.NameSnapshot,
+                Unit = i.Unit,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
+                DiscountType = i.DiscountType,
+                DiscountValue = i.DiscountValue,
+                DiscountedSubtotal = i.DiscountedSubtotal,
                 TaxRate = i.TaxRate,
-                Subtotal = i.Subtotal,
+                TaxAmount = i.TaxAmount,
                 Total = i.Total
             }).ToList()
         });
@@ -345,15 +352,21 @@ public class SaleService : ISaleService
             Status = invoice.Status,
             IssuedAt = invoice.IssuedAt,
             DueDate = invoice.DueDate,
+            Subtotal = invoice.Subtotal,
+            TaxTotal = invoice.TaxAmount,
             Total = invoice.Total,
             Items = invoice.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,
-                ProductName = i.ProductName,
+                NameSnapshot = i.NameSnapshot,
+                Unit = i.Unit,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
+                DiscountType = i.DiscountType,
+                DiscountValue = i.DiscountValue,
+                DiscountedSubtotal = i.DiscountedSubtotal,
                 TaxRate = i.TaxRate,
-                Subtotal = i.Subtotal,
+                TaxAmount = i.TaxAmount,
                 Total = i.Total
             }).ToList()
         };
@@ -426,20 +439,27 @@ public class SaleService : ISaleService
             Number = sale.Number,
             Date = sale.Date,
             Subtotal = sale.Subtotal,
-            TaxAmount = sale.TaxAmount,
+            TaxTotal = sale.TaxAmount,
             Total = sale.Total,
             State = sale.State,
             PaymentMethod = sale.PaymentMethod,
+            ApplyTax = sale.ApplyTax,
+            GlobalDiscountType = sale.GlobalDiscountType,
+            GlobalDiscountValue = sale.GlobalDiscountValue,
             Channel = sale.Channel,
             CreatedAt = sale.CreatedAt,
             Items = sale.Items.Select(i => new SaleItemResponse
             {
                 ProductId = i.ProductId,
-                ProductName = i.ProductName,
+                NameSnapshot = i.NameSnapshot,
+                Unit = i.Unit,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
+                DiscountType = i.DiscountType,
+                DiscountValue = i.DiscountValue,
+                DiscountedSubtotal = i.DiscountedSubtotal,
                 TaxRate = i.TaxRate,
-                Subtotal = i.Subtotal,
+                TaxAmount = i.TaxAmount,
                 Total = i.Total
             }).ToList()
         };

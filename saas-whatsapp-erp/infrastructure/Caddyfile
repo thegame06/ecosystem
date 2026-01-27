@@ -1,0 +1,18 @@
+{
+    email admin@tu-saas.com
+}
+
+# Dominio de la Web / App
+{$APP_DOMAIN} {
+    reverse_proxy frontend:80
+}
+
+# Dominio del API Backend
+{$API_DOMAIN} {
+    reverse_proxy backend_api:8080
+}
+
+# Dominio del WhatsApp Gateway (Evolution)
+{$WHATSAPP_DOMAIN} {
+    reverse_proxy evolution_api:8080
+}
