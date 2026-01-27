@@ -92,7 +92,7 @@ const RegisterPage: React.FC = () => {
               <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg">
                 <MessageSquare size={24} fill="white" />
               </div>
-              <span>SaaS<span className="text-primary-600">ERP</span></span>
+              <span className="text-slate-900">Annonai <span className="text-primary-600">Flow</span></span>
             </h1>
             <h2 className="mt-8 text-3xl font-black text-slate-900">Crea tu cuenta</h2>
             <p className="mt-3 text-sm text-slate-500">

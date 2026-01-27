@@ -135,7 +135,8 @@ builder.Services.AddCors(options =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .WithExposedHeaders("Content-Disposition");
     });
 });
 
@@ -183,8 +184,16 @@ try
     {
         var mongoClient = scope.ServiceProvider.GetRequiredService<IMongoClient>();
         var database = mongoClient.GetDatabase(mongoSettings.DatabaseName);
-        await SaaS.Infrastructure.Mongo.MongoIndexes.CreateIndexesAsync(database);
-        Console.WriteLine("MongoDB indexes verified/created.");
+        try 
+        {
+            await SaaS.Infrastructure.Mongo.MongoIndexes.CreateIndexesAsync(database);
+            Console.WriteLine("MongoDB indexes verified/created.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating MongoDB indexes: {ex.Message}");
+            // Don't crash the app for index errors in Dev, but log it
+        }
     }
 }
 catch (Exception ex)

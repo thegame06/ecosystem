@@ -230,7 +230,8 @@ public class WhatsAppByonProvider : IWhatsAppProvider
 
         var payload = new
         {
-            value = fullWebhookUrl,
+            url = fullWebhookUrl, // Evolution API v2
+            value = fullWebhookUrl, // Evolution API v1
             enabled = true,
             webhook_by_events = true,
             events = new[]
@@ -244,14 +245,30 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             }
         };
 
-        // Note: Evolution API v1.x uses /webhook/instance/set/{instanceName}
-        // v2.x use /webhook/set/{instanceName}
-        // Let's try to be compatible.
-        var success = await SendPostRequestAsync($"{_baseUrl}/webhook/instance/set/{instanceName}", payload, suppressErrorLog: true);
+        // Note: Evolution API endpoints vary by version
+        // We try the most common ones.
+        
+        // 1. Try V2 / Stable V1 endpoint
+        var success = await SendPostRequestAsync($"{_baseUrl}/webhook/set/{instanceName}", payload, suppressErrorLog: true);
+        
+        // 2. Try Legacy/Dev V1 endpoint
         if (!success)
         {
-            _logger.LogInformation("V1 Webhook endpoint failed or not found, trying V2 endpoint...");
-            await SendPostRequestAsync($"{_baseUrl}/webhook/set/{instanceName}", payload);
+            _logger.LogInformation("Webhook endpoint /webhook/set failed, trying /webhook/instance/set...");
+            success = await SendPostRequestAsync($"{_baseUrl}/webhook/instance/set/{instanceName}", payload, suppressErrorLog: true);
+        }
+
+        // 3. Try Instance-prefixed endpoint (some V2 setups)
+        if (!success)
+        {
+            _logger.LogInformation("Previous endpoints failed, trying /instance/webhook/set...");
+            success = await SendPostRequestAsync($"{_baseUrl}/instance/webhook/set/{instanceName}", payload, suppressErrorLog: true);
+        }
+
+        if (!success)
+        {
+            _logger.LogError("Failed to set webhook for instance {InstanceName} after trying all known endpoints. " +
+                             "Ensure the instance exists and the Webhook module is enabled in your Evolution API configuration.", instanceName);
         }
     }
 

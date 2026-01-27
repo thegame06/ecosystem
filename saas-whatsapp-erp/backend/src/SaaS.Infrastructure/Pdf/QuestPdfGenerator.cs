@@ -20,21 +20,32 @@ public class QuestPdfGenerator : IPdfGenerator
 
     public byte[] GenerateInvoicePdf(Invoice invoice, Company company, Customer customer)
     {
-        var document = Document.Create(container =>
+        try
         {
-            container.Page(page =>
+            var document = Document.Create(container =>
             {
-                page.Size(PageSizes.Letter);
-                page.Margin(40);
-                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.Letter);
+                    page.Margin(40);
+                    // Standard safety: Use a basic font
+                    page.DefaultTextStyle(x => x.FontSize(10));
 
-                page.Header().Element(c => ComposeHeader(c, invoice, company));
-                page.Content().Element(c => ComposeContent(c, invoice, company, customer));
-                page.Footer().Element(ComposeFooter);
+                    page.Header().Element(c => ComposeHeader(c, invoice, company));
+                    page.Content().Element(c => ComposeContent(c, invoice, company, customer));
+                    page.Footer().Element(ComposeFooter);
+                });
             });
-        });
 
-        return document.GeneratePdf();
+            return document.GeneratePdf();
+        }
+        catch (Exception ex)
+        {
+            // In a real environment, we would log this to a proper logger
+            Console.WriteLine($"FATAL ERROR in PDF Generation: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+            throw;
+        }
     }
 
     private void ComposeHeader(IContainer container, Invoice invoice, Company company)
@@ -50,7 +61,7 @@ public class QuestPdfGenerator : IPdfGenerator
                         .FontSize(16)
                         .Bold()
                         .FontColor(Colors.Blue.Darken2);
-                    
+
                     col.Item().Text($"País: {company.Country}");
                 });
 
@@ -61,13 +72,13 @@ public class QuestPdfGenerator : IPdfGenerator
                         .FontSize(18)
                         .Bold()
                         .FontColor(Colors.Blue.Darken2);
-                    
+
                     col.Item().Text($"No. {invoice.Number}")
                         .FontSize(14)
                         .Bold();
-                    
+
                     col.Item().Text($"Fecha: {invoice.CreatedAt:dd/MM/yyyy}");
-                    
+
                     col.Item().Text($"Estado: {TranslateStatus(invoice.Status)}")
                         .FontColor(GetStatusColor(invoice.Status));
                 });
@@ -86,12 +97,12 @@ public class QuestPdfGenerator : IPdfGenerator
             {
                 col.Item().Text("CLIENTE").FontSize(12).Bold();
                 col.Item().Text(customer.Name).FontSize(11);
-                
+
                 if (!string.IsNullOrEmpty(customer.Phone))
                 {
                     col.Item().Text($"Tel: {customer.Phone}");
                 }
-                
+
                 if (!string.IsNullOrEmpty(customer.TaxId))
                 {
                     col.Item().Text($"RUC: {customer.TaxId}");

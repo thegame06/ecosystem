@@ -119,7 +119,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, saleId, cu
             }
 
             // Create download
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const url = window.URL.createObjectURL(response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/pdf' }));
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', filename);

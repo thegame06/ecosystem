@@ -10,12 +10,12 @@ const Navbar: React.FC = () => {
     // For now, let's try to get it from API or assuming we stored it
     // If not stored, we might need a call to /auth/me
     const fetchUser = async () => {
-        try {
-            const response = await authService.getCurrentUser();
-            setUser(response.data);
-        } catch (error) {
-            console.error("Failed to fetch user", error);
-        }
+      try {
+        const response = await authService.getCurrentUser();
+        setUser(response.data);
+      } catch (error) {
+        console.error("Failed to fetch user", error);
+      }
     };
     fetchUser();
   }, []);
@@ -31,7 +31,7 @@ const Navbar: React.FC = () => {
             {user?.role || 'Seller'}
           </p>
         </div>
-        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+        <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold">
           {user ? user.firstName[0] : 'U'}
         </div>
       </div>

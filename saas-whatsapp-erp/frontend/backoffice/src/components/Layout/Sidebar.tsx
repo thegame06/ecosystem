@@ -36,7 +36,7 @@ const Sidebar: React.FC = () => {
           <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-900/50">
             <MessageSquare size={24} fill="white" />
           </div>
-          <h1 className="text-xl font-black tracking-tight">SaaS<span className="text-primary-500">ERP</span></h1>
+          <h1 className="text-xl font-black tracking-tight">Annonai <span className="text-primary-500">Flow</span></h1>
         </div>
       </div>
 

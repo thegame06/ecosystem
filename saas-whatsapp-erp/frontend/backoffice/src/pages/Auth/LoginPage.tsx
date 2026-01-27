@@ -37,7 +37,7 @@ const LoginPage: React.FC = () => {
               <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-900/20">
                 <MessageSquare size={24} fill="white" />
               </div>
-              <span>SaaS<span className="text-primary-600">ERP</span></span>
+              <span className="text-slate-900">Annonai <span className="text-primary-600">Flow</span></span>
             </h1>
             <h2 className="mt-8 text-3xl font-black text-slate-900 leading-tight">Bienvenido de nuevo</h2>
             <p className="mt-3 text-sm text-slate-500 font-medium">
@@ -119,7 +119,7 @@ const LoginPage: React.FC = () => {
           </form>
 
           <footer className="mt-12 text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
-            © 2026 SaaS ERP • Todos los derechos reservados.
+            © 2026 Annonai Flow • Todos los derechos reservados.
           </footer>
         </div>
       </div>
