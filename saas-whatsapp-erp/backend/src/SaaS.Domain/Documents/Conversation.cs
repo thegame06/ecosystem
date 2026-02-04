@@ -54,6 +54,12 @@ public class Conversation
     public string CustomerPhone { get; set; } = string.Empty;
 
     /// <summary>
+    /// ID de WhatsApp (JID) para identificar la conversación en el provider
+    /// </summary>
+    [BsonElement("remoteJid")]
+    public string? RemoteJid { get; set; }
+
+    /// <summary>
     /// Indica si hay mensajes sin leer
     /// </summary>
     [BsonElement("hasUnreadMessages")]

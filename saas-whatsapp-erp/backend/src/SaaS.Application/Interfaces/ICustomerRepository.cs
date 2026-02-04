@@ -9,6 +9,7 @@ public interface ICustomerRepository
     Task<List<Customer>> GetByCompanyIdAsync(string companyId);
     IQueryable<Customer> GetQueryable(string companyId);
     Task<Customer?> GetByPhoneAsync(string companyId, string phone);
+    Task<Customer?> GetByRemoteJidAsync(string companyId, string remoteJid);
     Task<Customer> UpdateAsync(Customer customer);
     Task<bool> DeleteAsync(string id);
 }

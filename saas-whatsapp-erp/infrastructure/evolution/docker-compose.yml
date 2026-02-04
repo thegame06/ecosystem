@@ -8,11 +8,21 @@ services:
     environment:
       - SERVER_URL=http://localhost:8080
       - AUTHENTICATION_API_KEY=SaaS_Super_Secret_Token_2026
-      - DELAY_MESSAGES=true
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - DEL_INSTANCE=false
       - DATABASE_ENABLED=false
-      # In v1, this is usually passed via the create instance call or global config if supported
+      - STORE_MESSAGES=false
+      - STORE_MESSAGE_UP=false
+      - STORE_CONTACTS=false
+      - STORE_CHATS=false
+      - LOG_LEVEL=ERROR,WARN,INFO
+      - CONFIG_SESSION_PHONE_CLIENT=AnnonaiFlow
+      - CONFIG_SESSION_PHONE_NAME=Chrome
+      - QRCODE_LIMIT=30
     volumes:
       - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
 
 volumes:
   evolution_instances:
+  evolution_store:

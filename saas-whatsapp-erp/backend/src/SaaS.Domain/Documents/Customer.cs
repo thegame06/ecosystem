@@ -31,6 +31,12 @@ public class Customer
     public string Phone { get; set; } = string.Empty;
 
     /// <summary>
+    /// ID de WhatsApp (JID) para identificarlo en el provider
+    /// </summary>
+    [BsonElement("remoteJid")]
+    public string? RemoteJid { get; set; }
+
+    /// <summary>
     /// Estado comercial actual del cliente
     /// </summary>
     [BsonElement("currentState")]

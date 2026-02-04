@@ -28,9 +28,15 @@ public class CustomerRepository : ICustomerRepository
             new CreateIndexModel<Customer>(
                 Builders<Customer>.IndexKeys.Ascending(c => c.Phone)),
             new CreateIndexModel<Customer>(
+                Builders<Customer>.IndexKeys.Ascending(c => c.RemoteJid)),
+            new CreateIndexModel<Customer>(
                 Builders<Customer>.IndexKeys.Combine(
                     Builders<Customer>.IndexKeys.Ascending(c => c.CompanyId),
-                    Builders<Customer>.IndexKeys.Ascending(c => c.Phone)))
+                    Builders<Customer>.IndexKeys.Ascending(c => c.Phone))),
+            new CreateIndexModel<Customer>(
+                Builders<Customer>.IndexKeys.Combine(
+                    Builders<Customer>.IndexKeys.Ascending(c => c.CompanyId),
+                    Builders<Customer>.IndexKeys.Ascending(c => c.RemoteJid)))
         };
 
         _customers.Indexes.CreateManyAsync(indexModels);
@@ -60,7 +66,14 @@ public class CustomerRepository : ICustomerRepository
     public async Task<Customer?> GetByPhoneAsync(string companyId, string phone)
     {
         return await _customers
-            .Find(c => c.CompanyId == companyId && c.Phone == phone)
+            .Find(c => c.CompanyId == companyId && (c.Phone == phone))
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<Customer?> GetByRemoteJidAsync(string companyId, string remoteJid)
+    {
+        return await _customers
+            .Find(c => c.CompanyId == companyId && c.RemoteJid == remoteJid)
             .FirstOrDefaultAsync();
     }
 

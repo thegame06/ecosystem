@@ -5,6 +5,7 @@ export interface Conversation {
     companyId: string;
     customerId: string;
     customerPhone: string;
+    remoteJid?: string;
     channel: string;
     lastMessage: string | null;
     lastState: CommercialState;

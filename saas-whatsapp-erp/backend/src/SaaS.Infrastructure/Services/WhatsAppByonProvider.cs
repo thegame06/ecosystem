@@ -118,12 +118,23 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             var instanceName = $"comp_{companyId}";
             var url = $"{_baseUrl}/message/sendText/{instanceName}";
 
+            var isLid = toNumber.Contains("@lid");
             var payload = new
             {
                 number = toNumber,
-                options = new { delay = 1200, linkPreview = false },
-                textMessage = new { text = message }
+                textMessage = new { text = message },
+                options = new 
+                { 
+                    delay = 1200, 
+                    linkPreview = false,
+                    checkContact = false // Crucial para LIDs en v1.8.2
+                }
             };
+
+            if (isLid)
+            {
+                _logger.LogInformation("[BYON] Sending message to LID JID: {Jid}", toNumber);
+            }
 
             return await SendPostRequestAsync(url, payload);
         }
@@ -146,13 +157,10 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             var payload = new
             {
                 number = toNumber,
-                mediaMessage = new
-                {
-                    mediatype = "document",
-                    media = base64File,
-                    caption = fileName,
-                    fileName = fileName
-                }
+                mediatype = "document",
+                media = base64File,
+                fileName = fileName,
+                caption = fileName
             };
 
             return await SendPostRequestAsync(url, payload);
@@ -166,7 +174,6 @@ public class WhatsAppByonProvider : IWhatsAppProvider
 
     private async Task CreateInstanceIfNotExists(string instanceName)
     {
-        // Try to fetch instance info
         var fetchUrl = $"{_baseUrl}/instance/fetchInstances?instanceName={instanceName}";
         var fetchRequest = new HttpRequestMessage(HttpMethod.Get, fetchUrl);
         fetchRequest.Headers.Add("apikey", _apiKey);
@@ -174,41 +181,44 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         var response = await _httpClient.SendAsync(fetchRequest);
         var exists = false;
 
+        // In v1.8.2, fetchInstances?instanceName=X returns:
+        // - 200 OK (Object) if exists
+        // - 404 Not Found if NOT exists
         if (response.IsSuccessStatusCode)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-            if (doc.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                exists = doc.RootElement.GetArrayLength() > 0;
-            }
-            else if (doc.RootElement.ValueKind == JsonValueKind.Object)
-            {
-                // In v1 it returns {"instance": {...}}
-                exists = doc.RootElement.TryGetProperty("instance", out _) ||
-                         doc.RootElement.TryGetProperty("instanceName", out _);
-            }
+            exists = true;
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            exists = false;
         }
 
         if (!exists)
         {
-            _logger.LogInformation("Instance {InstanceName} not found. Creating it...", instanceName);
-            // Create instance
+            _logger.LogInformation("Creating Evolution API v1.x instance: {InstanceName}", instanceName);
+            
+            // Evolution API v1.8.2 simple create payload
             var payload = new
             {
                 instanceName = instanceName,
                 token = instanceName,
-                qrcode = true,
-                integration = "WHATSAPP-BAILEYS"
+                qrcode = true
             };
 
-            await SendPostRequestAsync($"{_baseUrl}/instance/create", payload);
-
-            // Wait for it to be ready
-            await Task.Delay(1000);
+            var success = await SendPostRequestAsync($"{_baseUrl}/instance/create", payload);
+            if (success)
+            {
+                _logger.LogInformation("✅ Instance {InstanceName} created successfully", instanceName);
+                await Task.Delay(2000); // Give it time to initialize
+            }
+            else 
+            {
+                _logger.LogWarning("⚠️ Could not create instance {InstanceName}. Webhook setup might fail.", instanceName);
+                return; // Don't proceed to set webhook if creation failed
+            }
         }
 
-        // Always ensure webhook is set (in case it changed)
+        // Set webhook after instance exists
         await SetWebhookAsync(instanceName);
     }
 
@@ -216,24 +226,17 @@ public class WhatsAppByonProvider : IWhatsAppProvider
     public async Task SetWebhookAsync(string instanceName)
     {
         var webhookUrl = _configuration["EvolutionAPI:WebhookBaseUrl"];
-        if (string.IsNullOrEmpty(webhookUrl))
-        {
-            _logger.LogWarning("EvolutionAPI:WebhookBaseUrl is not configured. Skipping webhook setup.");
-            return;
-        }
+        if (string.IsNullOrEmpty(webhookUrl)) return;
 
-        // Clean trailing slash
         webhookUrl = webhookUrl.TrimEnd('/');
         var fullWebhookUrl = $"{webhookUrl}/api/webhooks/whatsapp/byon/{instanceName.Replace("comp_", "")}";
 
-        _logger.LogInformation("Setting webhook for {InstanceName} to {Url}", instanceName, fullWebhookUrl);
+        _logger.LogInformation("--- EVOLUTION v1.8.2 DEBUG: Configurando Webhook para {InstanceName} en {Url}", instanceName, fullWebhookUrl);
 
         var payload = new
         {
-            url = fullWebhookUrl, // Evolution API v2
-            value = fullWebhookUrl, // Evolution API v1
+            url = fullWebhookUrl,
             enabled = true,
-            webhook_by_events = true,
             events = new[]
             {
                 "MESSAGES_UPSERT",
@@ -245,30 +248,11 @@ public class WhatsAppByonProvider : IWhatsAppProvider
             }
         };
 
-        // Note: Evolution API endpoints vary by version
-        // We try the most common ones.
+        var success = await SendPostRequestAsync($"{_baseUrl}/webhook/set/{instanceName}", payload);
         
-        // 1. Try V2 / Stable V1 endpoint
-        var success = await SendPostRequestAsync($"{_baseUrl}/webhook/set/{instanceName}", payload, suppressErrorLog: true);
-        
-        // 2. Try Legacy/Dev V1 endpoint
         if (!success)
         {
-            _logger.LogInformation("Webhook endpoint /webhook/set failed, trying /webhook/instance/set...");
-            success = await SendPostRequestAsync($"{_baseUrl}/webhook/instance/set/{instanceName}", payload, suppressErrorLog: true);
-        }
-
-        // 3. Try Instance-prefixed endpoint (some V2 setups)
-        if (!success)
-        {
-            _logger.LogInformation("Previous endpoints failed, trying /instance/webhook/set...");
-            success = await SendPostRequestAsync($"{_baseUrl}/instance/webhook/set/{instanceName}", payload, suppressErrorLog: true);
-        }
-
-        if (!success)
-        {
-            _logger.LogError("Failed to set webhook for instance {InstanceName} after trying all known endpoints. " +
-                             "Ensure the instance exists and the Webhook module is enabled in your Evolution API configuration.", instanceName);
+            _logger.LogError("--- EVOLUTION v1.8.2 DEBUG: Error configurando webhook para {InstanceName}. URL intento: {Url}", instanceName, $"{_baseUrl}/webhook/set/{instanceName}");
         }
     }
 
@@ -325,6 +309,27 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         try
         {
             var instanceName = $"comp_{companyId}";
+            
+            // Check if instance exists first
+            var fetchUrl = $"{_baseUrl}/instance/fetchInstances?instanceName={instanceName}";
+            var fetchRequest = new HttpRequestMessage(HttpMethod.Get, fetchUrl);
+            fetchRequest.Headers.Add("apikey", _apiKey);
+
+            var response = await _httpClient.SendAsync(fetchRequest);
+            
+            // In v1.8.2: 200 OK = Exists, 404 = Not Found
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Instance {InstanceName} does not exist. User needs to connect WhatsApp first.", instanceName);
+                return false;
+            }
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Error checking instance {InstanceName}: {StatusCode}", instanceName, response.StatusCode);
+                return false;
+            }
+
             await SetWebhookAsync(instanceName);
             return true;
         }
@@ -335,5 +340,3 @@ public class WhatsAppByonProvider : IWhatsAppProvider
         }
     }
 }
-
-

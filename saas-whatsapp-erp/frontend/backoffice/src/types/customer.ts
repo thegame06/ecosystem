@@ -5,6 +5,7 @@ export interface Customer {
     firstName?: string; // UI Compat
     lastName?: string; // UI Compat
     phone: string;
+    remoteJid?: string;
     currentState?: string; // CommercialState Enum
     taxId?: string;
     email?: string;

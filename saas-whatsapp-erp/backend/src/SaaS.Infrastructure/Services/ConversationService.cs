@@ -45,6 +45,7 @@ public class ConversationService : IConversationService
             CompanyId = conversation.CompanyId,
             CustomerId = conversation.CustomerId,
             CustomerPhone = conversation.CustomerPhone,
+            RemoteJid = conversation.RemoteJid,
             Channel = conversation.Channel,
             LastMessage = conversation.LastMessage,
             LastState = conversation.LastState,
@@ -181,6 +182,7 @@ public class ConversationService : IConversationService
             CompanyId = customer.CompanyId,
             Name = customer.Name,
             Phone = customer.Phone,
+            RemoteJid = customer.RemoteJid,
             Email = customer.Email,
             Address = customer.Address,
             TaxId = customer.TaxId,
@@ -193,7 +195,19 @@ public class ConversationService : IConversationService
         try 
         {
             // 1. Cargar o crear cliente (Identity Resolution)
-            var customer = await _customerRepository.GetByPhoneAsync(companyId, fromPhone);
+            // Priorizamos búsqueda por RemoteJid si está disponible, ya que es la identidad real en WhatsApp Web/Evolution
+            Customer? customer = null;
+            if (!string.IsNullOrEmpty(remoteJid))
+            {
+                customer = await _customerRepository.GetByRemoteJidAsync(companyId, remoteJid);
+            }
+
+            // Fallback a teléfono si no se encontró por JID o no hay JID
+            if (customer == null)
+            {
+                customer = await _customerRepository.GetByPhoneAsync(companyId, fromPhone);
+            }
+
             if (customer == null)
             {
                 var customerName = !string.IsNullOrEmpty(pushName) ? pushName : fromPhone;
@@ -202,17 +216,34 @@ public class ConversationService : IConversationService
                 {
                     CompanyId = companyId,
                     Phone = fromPhone,
+                    RemoteJid = remoteJid,
                     Name = customerName,
                     CurrentState = CommercialState.LEAD,
                     CreatedAt = DateTime.UtcNow
                 };
                 await _customerRepository.CreateAsync(customer);
             }
-            else if (customer.Name == customer.Phone && !string.IsNullOrEmpty(pushName))
+            else 
             {
+                var updated = false;
                 // Auto-update name if it was just the phone number
-                customer.Name = pushName;
-                await _customerRepository.UpdateAsync(customer);
+                if (customer.Name == customer.Phone && !string.IsNullOrEmpty(pushName))
+                {
+                    customer.Name = pushName;
+                    updated = true;
+                }
+
+                // Asegurar que guardamos el RemoteJid si no lo teníamos (Sincronización)
+                if (string.IsNullOrEmpty(customer.RemoteJid) && !string.IsNullOrEmpty(remoteJid))
+                {
+                    customer.RemoteJid = remoteJid;
+                    updated = true;
+                }
+
+                if (updated)
+                {
+                    await _customerRepository.UpdateAsync(customer);
+                }
             }
 
 
@@ -225,6 +256,7 @@ public class ConversationService : IConversationService
                     CompanyId = companyId,
                     CustomerId = customer.Id,
                     CustomerPhone = customer.Phone,
+                    RemoteJid = customer.RemoteJid,
                     LastMessage = text,
                     LastState = customer.CurrentState,
                     HasUnreadMessages = true,
@@ -245,6 +277,13 @@ public class ConversationService : IConversationService
                 conversation.HasUnreadMessages = true;
                 conversation.UpdatedAt = DateTime.UtcNow;
                 conversation.LastActivityAt = DateTime.UtcNow;
+                
+                // Sincronizar RemoteJid si cambió o no existía
+                if (string.IsNullOrEmpty(conversation.RemoteJid) && !string.IsNullOrEmpty(customer.RemoteJid))
+                {
+                    conversation.RemoteJid = customer.RemoteJid;
+                }
+
                 await _conversationRepository.UpdateAsync(conversation);
             }
 
@@ -288,14 +327,16 @@ public class ConversationService : IConversationService
         var canSend = await _planService.CanConsumeAsync(companyId, "messages");
         if (!canSend) return false;
 
-        // 2. Enviar via Provider
-        var success = await _whatsAppProvider.SendTextMessageAsync(companyId, customer.Phone, message);
+        // 2. Enviar via Provider (Preferir RemoteJid si existe para Evolution API)
+        var targetNumber = !string.IsNullOrEmpty(customer.RemoteJid) ? customer.RemoteJid : customer.Phone;
+        var success = await _whatsAppProvider.SendTextMessageAsync(companyId, targetNumber, message);
         
         // 3. Guardar Mensaje Saliente (Tracking)
         await _conversationMessageService.CreateMessageAsync(companyId, new CreateMessageRequest
         {
             ConversationId = conversation.Id,
             CustomerId = customer.Id,
+            RemoteJid = targetNumber,
             FromMe = true, // Es saliente
             SenderName = "System",
             Content = message,
@@ -306,6 +347,7 @@ public class ConversationService : IConversationService
 
         if (success)
         {
+            Console.WriteLine($"[SUCCESS] Message sent to {targetNumber}");
             // 4. Actualizar conversación
             conversation.LastMessage = message;
             conversation.UpdatedAt = DateTime.UtcNow;
@@ -351,6 +393,8 @@ public class ConversationService : IConversationService
             Id = conversation.Id,
             CompanyId = conversation.CompanyId,
             CustomerId = conversation.CustomerId,
+            CustomerPhone = conversation.CustomerPhone,
+            RemoteJid = conversation.RemoteJid,
             Channel = conversation.Channel,
             LastMessage = conversation.LastMessage,
             LastState = conversation.LastState,

@@ -8,6 +8,7 @@ public class ConversationResponse
     public string CompanyId { get; set; } = string.Empty;
     public string CustomerId { get; set; } = string.Empty;
     public string CustomerPhone { get; set; } = string.Empty;
+    public string? RemoteJid { get; set; }
     public string Channel { get; set; } = string.Empty;
     public string? LastMessage { get; set; }
     public CommercialState LastState { get; set; }
