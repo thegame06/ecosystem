@@ -1,28 +1,67 @@
 services:
   evolution_api:
-    image: atendai/evolution-api:v1.8.2
+    image: atendai/evolution-api:v2.2.2
     container_name: evolution_api
     restart: always
     ports:
       - "8080:8080"
+    depends_on:
+      - redis
+      - postgres
     environment:
       - SERVER_URL=http://localhost:8080
       - AUTHENTICATION_API_KEY=SaaS_Super_Secret_Token_2026
-      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
-      - DEL_INSTANCE=false
-      - DATABASE_ENABLED=false
-      - STORE_MESSAGES=false
-      - STORE_MESSAGE_UP=false
-      - STORE_CONTACTS=false
-      - STORE_CHATS=false
-      - LOG_LEVEL=ERROR,WARN,INFO
-      - CONFIG_SESSION_PHONE_CLIENT=AnnonaiFlow
+      
+      # Database (Postgres Required for V2 stability)
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:evolution@postgres:5432/evolution?schema=public
+      - DATABASE_CLIENT_NAME=evolution_bot
+      
+      # Redis
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/0
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - CACHE_REDIS_SAVE_INSTANCES=false
+      - CACHE_LOCAL_ENABLED=false
+      
+      # Session & QR
+      - CONFIG_SESSION_PHONE_CLIENT=SaaS_ERP_Pro
       - CONFIG_SESSION_PHONE_NAME=Chrome
       - QRCODE_LIMIT=30
+      
+      # Webhooks
+      - WEBHOOK_GLOBAL_URL=https://local-annonaiflow-api.annonai.com/api/webhooks/whatsapp/all
+      - WEBHOOK_GLOBAL_ENABLED=false 
+      
+      # Logs
+      - LOG_LEVEL=ERROR,WARN,INFO
+
     volumes:
       - evolution_instances:/evolution/instances
       - evolution_store:/evolution/store
 
+  redis:
+    image: redis:alpine
+    container_name: evolution_redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - evolution_redis_data:/data
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: evolution_postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=evolution
+      - POSTGRES_PASSWORD=evolution
+      - POSTGRES_DB=evolution
+    volumes:
+      - evolution_pg_data:/var/lib/postgresql/data
+
 volumes:
   evolution_instances:
   evolution_store:
+  evolution_redis_data:
+  evolution_pg_data:

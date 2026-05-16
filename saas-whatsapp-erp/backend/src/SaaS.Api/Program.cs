@@ -104,6 +104,7 @@ builder.Services.AddSingleton<SaaS.Application.Interfaces.IPdfGenerator, SaaS.In
 // WhatsApp Providers
 builder.Services.AddHttpClient<WhatsAppCloudApiProvider>();
 builder.Services.AddScoped<WhatsAppByonProvider>();
+builder.Services.AddScoped<WhatsAppEvolutionV2Provider>();
 builder.Services.AddScoped<IWhatsAppProvider, WhatsAppProviderDispatcher>();
 
 // Configurar autenticación JWT

@@ -65,8 +65,8 @@ public class WhatsAppProviderDispatcher : IWhatsAppProvider
         var company = await _companyRepository.GetByIdAsync(companyId);
         if (company == null || company.WhatsAppSettings == null)
         {
-            _logger.LogWarning("WhatsApp settings not found for Company {CompanyId}, falling back to BYON provider", companyId);
-            return _serviceProvider.GetRequiredService<WhatsAppByonProvider>();
+            _logger.LogWarning("WhatsApp settings not found for Company {CompanyId}, falling back to Evolution V2 provider", companyId);
+            return _serviceProvider.GetRequiredService<WhatsAppEvolutionV2Provider>();
         }
 
 
@@ -75,6 +75,6 @@ public class WhatsAppProviderDispatcher : IWhatsAppProvider
             return _serviceProvider.GetRequiredService<WhatsAppCloudApiProvider>();
         }
 
-        return _serviceProvider.GetRequiredService<WhatsAppByonProvider>();
+        return _serviceProvider.GetRequiredService<WhatsAppEvolutionV2Provider>();
     }
 }
